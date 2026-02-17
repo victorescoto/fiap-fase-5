@@ -80,7 +80,8 @@ def create_custom_scorers() -> Dict[str, Any]:
         """Calcula recall específico para a classe 'alto'."""
         y_true = np.array(y_true)
         y_pred = np.array(y_pred)
-        recalls = recall_score(y_true, y_pred, average=None, labels=CLASS_ORDER)
+        recalls = recall_score(
+            y_true, y_pred, average=None, labels=CLASS_ORDER)
         idx_alto = CLASS_ORDER.index("alto")
         return recalls[idx_alto]
 
@@ -110,7 +111,8 @@ def perform_cross_validation(
     Returns:
         Dict com métricas da validação cruzada
     """
-    cv = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=RANDOM_STATE)
+    cv = StratifiedKFold(n_splits=N_SPLITS, shuffle=True,
+                         random_state=RANDOM_STATE)
     scorers = create_custom_scorers()
 
     with warnings.catch_warnings():
@@ -263,10 +265,14 @@ def train_model(
     print("\n📈 Executando Cross-Validation (5 folds)...")
     cv_metrics = perform_cross_validation(pipeline, X_train, y_train)
 
-    print(f"  F1 Macro:     {cv_metrics['f1_macro_mean']:.4f} ± {cv_metrics['f1_macro_std']:.4f}")
-    print(f"  Recall Macro: {cv_metrics['recall_macro_mean']:.4f} ± {cv_metrics['recall_macro_std']:.4f}")
-    print(f"  Recall Alto:  {cv_metrics['recall_alto_mean']:.4f} ± {cv_metrics['recall_alto_std']:.4f}")
-    print(f"  Accuracy:     {cv_metrics['accuracy_mean']:.4f} ± {cv_metrics['accuracy_std']:.4f}")
+    print(
+        f"  F1 Macro:     {cv_metrics['f1_macro_mean']:.4f} ± {cv_metrics['f1_macro_std']:.4f}")
+    print(
+        f"  Recall Macro: {cv_metrics['recall_macro_mean']:.4f} ± {cv_metrics['recall_macro_std']:.4f}")
+    print(
+        f"  Recall Alto:  {cv_metrics['recall_alto_mean']:.4f} ± {cv_metrics['recall_alto_std']:.4f}")
+    print(
+        f"  Accuracy:     {cv_metrics['accuracy_mean']:.4f} ± {cv_metrics['accuracy_std']:.4f}")
 
     # 6. Treinamento final com todos os dados de treino
     print("\n🏋️ Treinando modelo final...")

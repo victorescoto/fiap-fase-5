@@ -12,6 +12,8 @@ Uso:
     python -m src.model.run_training
 """
 
+from src.model.train import train_model
+import pandas as pd
 import sys
 from pathlib import Path
 
@@ -19,12 +21,10 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
-import pandas as pd
-from src.model.train import train_model
-
 
 # Caminho do dataset (ajuste conforme necessário)
-DATASET_PATH = Path(__file__).parent.parent.parent.parent / "BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
+DATASET_PATH = Path(__file__).parent.parent.parent.parent / \
+    "BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
 
 # Alternativa: caminho absoluto
 # DATASET_PATH = "/Users/renatomota/Desktop/tc_challenge5/BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
@@ -32,25 +32,25 @@ DATASET_PATH = Path(__file__).parent.parent.parent.parent / "BASE DE DADOS PEDE 
 
 def main():
     """Executa o pipeline completo de treinamento."""
-    
+
     print("=" * 60)
     print("📂 CARREGANDO DATASET")
     print("=" * 60)
     print(f"   Caminho: {DATASET_PATH}")
-    
+
     # ========================================
     # 1. CARREGAMENTO DO DATASET (AQUI!)
     # ========================================
     df = pd.read_excel(DATASET_PATH)
-    
+
     print(f"   Linhas: {len(df)}")
     print(f"   Colunas: {len(df.columns)}")
-    
+
     # ========================================
     # 2. TREINAMENTO DO MODELO
     # ========================================
     pipeline, results = train_model(df, save=True)
-    
+
     # ========================================
     # 3. RESUMO FINAL
     # ========================================
@@ -58,5 +58,7 @@ def main():
     print("📊 RESUMO FINAL")
     print("=" * 60)
     print(f"   Modelo: {results['model_name']}")
+
+
 if __name__ == "__main__":
     main()

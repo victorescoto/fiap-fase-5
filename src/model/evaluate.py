@@ -117,7 +117,8 @@ def print_evaluation_report(
     print("=" * 60)
 
     # Classification report do sklearn
-    print("\n" + classification_report(y_true, y_pred, labels=CLASS_ORDER, digits=4))
+    print("\n" + classification_report(y_true,
+          y_pred, labels=CLASS_ORDER, digits=4))
 
     # Matriz de confusão
     print("\n" + "-" * 60)
