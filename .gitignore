@@ -8,3 +8,27 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Testing / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Model artifacts (large binary files)
+app/model/*.pkl
+app/model/*.joblib
+!app/model/.gitkeep
