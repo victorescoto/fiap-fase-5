@@ -3,7 +3,7 @@ name = "challenge"
 version = "0.1.0"
 description = "Modelo preditivo de risco de defasagem escolar - Passos Mágicos"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "fastapi[standard]>=0.129.0",
     "joblib>=1.4.0",
