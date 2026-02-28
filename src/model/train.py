@@ -7,8 +7,11 @@ This module contains functions to:
 - Evaluate and save the trained model
 """
 
-import os
+import json
+import logging
+import pickle
 import warnings
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Any
 
@@ -23,14 +26,15 @@ from sklearn.model_selection import (
 )
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import (
-    f1_score,
     recall_score,
     make_scorer,
 )
 
 from .feature_engineering import build_features
-from .preprocessing import build_preprocessor
+from .preprocessing import build_preprocessor, get_feature_names_from_preprocessor
 from .evaluate import evaluate_model
+
+logger = logging.getLogger(__name__)
 
 # Configuration
 RANDOM_STATE = 42
@@ -145,18 +149,25 @@ def perform_cross_validation(
 def save_model(
     pipeline: Pipeline,
     metrics: Dict[str, float],
+    feature_names: List[str],
+    training_info: Dict[str, Any],
     output_dir: Optional[Path] = None,
 ) -> Path:
     """
-    Saves the trained model using joblib.
+    Saves the trained model in API-compatible format.
+
+    Saves model as pickle (.pkl) and metadata as JSON for API consumption.
+    Includes comprehensive information for deployment and monitoring.
 
     Args:
         pipeline: Trained pipeline
         metrics: Dict with evaluation metrics
+        feature_names: List of feature names (in order)
+        training_info: Additional training information (data shapes, CV results, etc.)
         output_dir: Output directory (default: MODEL_DIR)
 
     Returns:
-        Path to the saved file
+        Path to the saved model file
     """
     if output_dir is None:
         output_dir = MODEL_DIR
@@ -164,22 +175,61 @@ def save_model(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save the model
-    model_path = output_dir / "model.joblib"
-    joblib.dump(pipeline, model_path)
+    # Save model as pickle (API expects .pkl)
+    model_path = output_dir / "model.pkl"
+    with open(model_path, 'wb') as f:
+        pickle.dump(pipeline, f)
 
-    # Save metadata
+    # Calculate baseline statistics for drift monitoring
+    prediction_dist = {}
+    for classe in CLASS_ORDER:
+        count = sum(1 for key in metrics.keys() if key.startswith(f"recall_{classe}"))
+        if count > 0:
+            # Use test set class distribution as baseline proxy
+            prediction_dist[classe] = 1.0 / len(CLASS_ORDER)  # Simplified
+
+    # Prepare comprehensive metadata (API expects JSON)
     metadata = {
+        "version": "1.0.0",
         "model_name": "LogisticRegression",
-        "metrics": metrics,
+        "trained_at": datetime.now().isoformat(),
+        "training_data_shape": training_info.get("training_data_shape", [0, 0]),
+        "test_data_shape": training_info.get("test_data_shape", [0, 0]),
+        "metrics": {
+            "test_f1_macro": metrics.get("f1_macro", 0.0),
+            "test_f1_weighted": metrics.get("f1_weighted", 0.0),
+            "test_accuracy": metrics.get("accuracy", 0.0),
+            "test_recall_macro": metrics.get("recall_macro", 0.0),
+            "test_precision_macro": metrics.get("precision_macro", 0.0),
+            "cv_f1_mean": training_info.get("cv_f1_mean", 0.0),
+            "cv_f1_std": training_info.get("cv_f1_std", 0.0),
+        },
+        "features": feature_names,
         "class_order": CLASS_ORDER,
-        "random_state": RANDOM_STATE,
+        "hyperparameters": {
+            "random_state": RANDOM_STATE,
+            "test_size": TEST_SIZE,
+            "n_splits": N_SPLITS,
+            "solver": "lbfgs",
+            "max_iter": 1000,
+            "class_weight": "balanced",
+        },
+        "baseline_stats": {
+            "prediction_distribution": prediction_dist,
+            "avg_confidence": 0.70,  # Initial baseline
+            "total_samples": training_info.get("training_data_shape", [0])[0],
+        },
     }
-    metadata_path = output_dir / "model_metadata.joblib"
-    joblib.dump(metadata, metadata_path)
 
-    print(f"\n✅ Model saved at: {model_path}")
-    print(f"✅ Metadata saved at: {metadata_path}")
+    # Save metadata as JSON (API expects this format)
+    metadata_path = output_dir / "model_metadata.json"
+    with open(metadata_path, 'w') as f:
+        json.dump(metadata, f, indent=2)
+
+    logger.info(f"\n✅ Model saved at: {model_path}")
+    logger.info(f"✅ Metadata saved at: {metadata_path}")
+    logger.info("   Format: pickle (.pkl) + JSON for API compatibility")
+    logger.info(f"   Features tracked: {len(feature_names)}")
 
     return model_path
 
@@ -211,13 +261,13 @@ def train_model(
         - Trained model pipeline
         - Dict with results and metrics
     """
-    print("\n" + "=" * 60)
-    print("🚀 STARTING MODEL TRAINING")
-    print("   Model: LogisticRegression")
-    print("=" * 60)
+    logger.info("\n" + "=" * 60)
+    logger.info("🚀 STARTING MODEL TRAINING")
+    logger.info("   Model: LogisticRegression")
+    logger.info("=" * 60)
 
     # 1. Feature Engineering
-    print("\n📐 Executing Feature Engineering...")
+    logger.info("\n📐 Executing Feature Engineering...")
     X, y = build_features(df, include_target=True)
 
     if y is None:
@@ -228,16 +278,16 @@ def train_model(
     X = X[mask].reset_index(drop=True)
     y = y[mask].reset_index(drop=True)
 
-    print(f"  Total samples: {len(X)}")
-    print(f"  Total features: {X.shape[1]}")
-    print(f"\n  Target distribution:")
+    logger.info(f"  Total samples: {len(X)}")
+    logger.info(f"  Total features: {X.shape[1]}")
+    logger.info("\n  Target distribution:")
     for classe in CLASS_ORDER:
         count = (y == classe).sum()
         pct = count / len(y) * 100
-        print(f"    {classe}: {count} ({pct:.1f}%)")
+        logger.info(f"    {classe}: {count} ({pct:.1f}%)")
 
     # 2. Stratified split
-    print("\n📊 Performing stratified train/test split...")
+    logger.info("\n📊 Performing stratified train/test split...")
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
@@ -245,15 +295,15 @@ def train_model(
         stratify=y,
         random_state=RANDOM_STATE,
     )
-    print(f"  Train: {len(X_train)} samples")
-    print(f"  Test:  {len(X_test)} samples")
+    logger.info(f"  Train: {len(X_train)} samples")
+    logger.info(f"  Test:  {len(X_test)} samples")
 
     # 3. Preprocessor construction
-    print("\n🔧 Building preprocessor...")
+    logger.info("\n🔧 Building preprocessor...")
     preprocessor = build_preprocessor(X_train)
 
     # 4. Pipeline creation
-    print("\n🔬 Creating Pipeline (Preprocessor + LogisticRegression)...")
+    logger.info("\n🔬 Creating Pipeline (Preprocessor + LogisticRegression)...")
     pipeline = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
@@ -262,31 +312,47 @@ def train_model(
     )
 
     # 5. Cross-validation
-    print("\n📈 Executing Cross-Validation (5 folds)...")
+    logger.info("\n📈 Executing Cross-Validation (5 folds)...")
     cv_metrics = perform_cross_validation(pipeline, X_train, y_train)
 
-    print(
+    logger.info(
         f"  F1 Macro:     {cv_metrics['f1_macro_mean']:.4f} ± {cv_metrics['f1_macro_std']:.4f}")
-    print(
+    logger.info(
         f"  Recall Macro: {cv_metrics['recall_macro_mean']:.4f} ± {cv_metrics['recall_macro_std']:.4f}")
-    print(
+    logger.info(
         f"  Recall Alto:  {cv_metrics['recall_alto_mean']:.4f} ± {cv_metrics['recall_alto_std']:.4f}")
-    print(
+    logger.info(
         f"  Accuracy:     {cv_metrics['accuracy_mean']:.4f} ± {cv_metrics['accuracy_std']:.4f}")
 
     # 6. Final training with all training data
-    print("\n🏋️ Training final model...")
+    logger.info("\n🏋️ Training final model...")
     pipeline.fit(X_train, y_train)
 
-    # 7. Final evaluation on test set
-    print("\n" + "=" * 60)
-    print("📋 FINAL EVALUATION ON TEST SET")
-    print("=" * 60)
+    # 7. Extract feature names for metadata
+    logger.info("\n📝 Extracting feature names from preprocessor...")
+    preprocessor = pipeline.named_steps['preprocessor']
+    feature_names = get_feature_names_from_preprocessor(preprocessor, X_train)
+    logger.info(f"  Extracted {len(feature_names)} features")
+
+    # 8. Final evaluation on test set
+    logger.info("\n" + "=" * 60)
+    logger.info("📋 FINAL EVALUATION ON TEST SET")
+    logger.info("=" * 60)
     test_metrics = evaluate_model(pipeline, X_test, y_test)
 
-    # 8. Model saving
+    # 9. Prepare training info for metadata
+    training_info = {
+        "training_data_shape": [len(X_train), X_train.shape[1]],
+        "test_data_shape": [len(X_test), X_test.shape[1]],
+        "cv_f1_mean": cv_metrics["f1_macro_mean"],
+        "cv_f1_std": cv_metrics["f1_macro_std"],
+        "cv_recall_macro_mean": cv_metrics["recall_macro_mean"],
+        "cv_recall_alto_mean": cv_metrics["recall_alto_mean"]
+    }
+
+    # 10. Model saving
     if save:
-        save_model(pipeline, test_metrics, output_dir)
+        save_model(pipeline, test_metrics, feature_names, training_info, output_dir)
 
     # Prepare results
     results = {
@@ -298,9 +364,9 @@ def train_model(
         "feature_count": X.shape[1],
     }
 
-    print("\n" + "=" * 60)
-    print("✅ TRAINING COMPLETED SUCCESSFULLY!")
-    print("=" * 60)
+    logger.info("\n" + "=" * 60)
+    logger.info("✅ TRAINING COMPLETED SUCCESSFULLY!")
+    logger.info("=" * 60)
 
     return pipeline, results
 

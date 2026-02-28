@@ -8,6 +8,7 @@ This module contains functions to:
 - Calculate recall per class
 """
 
+import logging
 from typing import Dict, Any, Optional, Union
 
 import numpy as np
@@ -21,6 +22,8 @@ from sklearn.metrics import (
     accuracy_score,
 )
 from sklearn.pipeline import Pipeline
+
+logger = logging.getLogger(__name__)
 
 # Class order for consistency
 CLASS_ORDER = ["baixo", "medio", "alto"]
@@ -112,52 +115,52 @@ def print_evaluation_report(
         y_pred: Predicted labels
         metrics: Dict with calculated metrics
     """
-    print("\n" + "=" * 60)
-    print("📊 CLASSIFICATION REPORT")
-    print("=" * 60)
+    logger.info("\n" + "=" * 60)
+    logger.info("📊 CLASSIFICATION REPORT")
+    logger.info("=" * 60)
 
     # Classification report from sklearn
-    print("\n" + classification_report(y_true,
+    logger.info("\n" + classification_report(y_true,
           y_pred, labels=CLASS_ORDER, digits=4))
 
     # Confusion matrix
-    print("\n" + "-" * 60)
-    print("🔢 CONFUSION MATRIX")
-    print("-" * 60)
+    logger.info("\n" + "-" * 60)
+    logger.info("🔢 CONFUSION MATRIX")
+    logger.info("-" * 60)
     cm_df = format_confusion_matrix(y_true, y_pred)
-    print(cm_df.to_string())
+    logger.info(cm_df.to_string())
 
     # Main metrics
-    print("\n" + "-" * 60)
-    print("📈 MAIN METRICS")
-    print("-" * 60)
-    print(f"  F1 Macro:     {metrics['f1_macro']:.4f}")
-    print(f"  F1 Weighted:  {metrics['f1_weighted']:.4f}")
-    print(f"  Accuracy:     {metrics['accuracy']:.4f}")
+    logger.info("\n" + "-" * 60)
+    logger.info("📈 MAIN METRICS")
+    logger.info("-" * 60)
+    logger.info(f"  F1 Macro:     {metrics['f1_macro']:.4f}")
+    logger.info(f"  F1 Weighted:  {metrics['f1_weighted']:.4f}")
+    logger.info(f"  Accuracy:     {metrics['accuracy']:.4f}")
 
     # Recall per class
-    print("\n" + "-" * 60)
-    print("🎯 RECALL PER CLASS")
-    print("-" * 60)
+    logger.info("\n" + "-" * 60)
+    logger.info("🎯 RECALL PER CLASS")
+    logger.info("-" * 60)
     for classe in CLASS_ORDER:
         recall = metrics[f"recall_{classe}"]
-        print(f"  {classe.capitalize():6}: {recall:.4f}")
+        logger.info(f"  {classe.capitalize():6}: {recall:.4f}")
 
     # Precision per class
-    print("\n" + "-" * 60)
-    print("🎯 PRECISION PER CLASS")
-    print("-" * 60)
+    logger.info("\n" + "-" * 60)
+    logger.info("🎯 PRECISION PER CLASS")
+    logger.info("-" * 60)
     for classe in CLASS_ORDER:
         precision = metrics[f"precision_{classe}"]
-        print(f"  {classe.capitalize():6}: {precision:.4f}")
+        logger.info(f"  {classe.capitalize():6}: {precision:.4f}")
 
     # F1 per class
-    print("\n" + "-" * 60)
-    print("🎯 F1 PER CLASS")
-    print("-" * 60)
+    logger.info("\n" + "-" * 60)
+    logger.info("🎯 F1 PER CLASS")
+    logger.info("-" * 60)
     for classe in CLASS_ORDER:
         f1 = metrics[f"f1_{classe}"]
-        print(f"  {classe.capitalize():6}: {f1:.4f}")
+        logger.info(f"  {classe.capitalize():6}: {f1:.4f}")
 
 
 def evaluate_model(

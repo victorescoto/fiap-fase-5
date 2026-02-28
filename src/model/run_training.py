@@ -12,10 +12,18 @@ Usage:
     python -m src.model.run_training
 """
 
+import logging
 from src.model.train import train_model
 import pandas as pd
 import sys
 from pathlib import Path
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Add root directory to path
 ROOT_DIR = Path(__file__).parent.parent.parent
@@ -23,28 +31,24 @@ sys.path.insert(0, str(ROOT_DIR))
 
 
 # Dataset path (adjust as needed)
-DATASET_PATH = Path(__file__).parent.parent.parent.parent / \
-    "BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
-
-# Alternative: absolute path
-# DATASET_PATH = "/Users/renatomota/Desktop/tc_challenge5/BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
+DATASET_PATH = ROOT_DIR / "notebooks" / "data" / "raw.xlsx"
 
 
 def main():
     """Executes the complete training pipeline."""
 
-    print("=" * 60)
-    print("📂 LOADING DATASET")
-    print("=" * 60)
-    print(f"   Path: {DATASET_PATH}")
+    logger.info("=" * 60)
+    logger.info("📂 LOADING DATASET")
+    logger.info("=" * 60)
+    logger.info(f"   Path: {DATASET_PATH}")
 
     # ========================================
     # 1. DATASET LOADING (HERE!)
     # ========================================
     df = pd.read_excel(DATASET_PATH)
 
-    print(f"   Rows: {len(df)}")
-    print(f"   Columns: {len(df.columns)}")
+    logger.info(f"   Rows: {len(df)}")
+    logger.info(f"   Columns: {len(df.columns)}")
 
     # ========================================
     # 2. MODEL TRAINING
@@ -54,10 +58,10 @@ def main():
     # ========================================
     # 3. FINAL SUMMARY
     # ========================================
-    print("\n" + "=" * 60)
-    print("📊 FINAL SUMMARY")
-    print("=" * 60)
-    print(f"   Model: {results['model_name']}")
+    logger.info("\n" + "=" * 60)
+    logger.info("📊 FINAL SUMMARY")
+    logger.info("=" * 60)
+    logger.info(f"   Model: {results['model_name']}")
 
 
 if __name__ == "__main__":
