@@ -1,10 +1,10 @@
 """
-Pré-processamento de dados para o modelo de defasagem escolar.
+Data preprocessing for the school delay prediction model.
 
-Este módulo contém funções para:
-- Identificar automaticamente colunas numéricas e categóricas
-- Criar transformadores para cada tipo de coluna
-- Construir um ColumnTransformer completo para o pipeline
+This module contains functions to:
+- Automatically identify numeric and categorical columns
+- Create transformers for each column type
+- Build a complete ColumnTransformer for the pipeline
 """
 
 import pandas as pd
@@ -19,20 +19,20 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 def identify_column_types(X: pd.DataFrame) -> Tuple[List[str], List[str]]:
     """
-    Identifica automaticamente colunas numéricas e categóricas.
+    Automatically identifies numeric and categorical columns.
 
-    Regras:
-    - Colunas com dtype numérico (int, float) -> numéricas
-    - Colunas com dtype object ou category -> categóricas
-    - Colunas booleanas -> numéricas (já são 0/1)
+    Rules:
+    - Columns with numeric dtype (int, float) -> numeric
+    - Columns with object or category dtype -> categorical
+    - Boolean columns -> numeric (already 0/1)
 
     Args:
-        X: DataFrame com as features
+        X: DataFrame with features
 
     Returns:
-        Tuple contendo:
-        - Lista de nomes de colunas numéricas
-        - Lista de nomes de colunas categóricas
+        Tuple containing:
+        - List of numeric column names
+        - List of categorical column names
     """
     numeric_cols = []
     categorical_cols = []
@@ -42,12 +42,14 @@ def identify_column_types(X: pd.DataFrame) -> Tuple[List[str], List[str]]:
 
         if pd.api.types.is_numeric_dtype(dtype):
             numeric_cols.append(col)
-        elif pd.api.types.is_object_dtype(dtype) or pd.api.types.is_categorical_dtype(dtype):
+        elif pd.api.types.is_object_dtype(dtype) or pd.api.types.is_categorical_dtype(
+            dtype
+        ):
             categorical_cols.append(col)
         elif pd.api.types.is_bool_dtype(dtype):
             numeric_cols.append(col)
         else:
-            # Por segurança, trata como categórica
+            # For safety, treat as categorical
             categorical_cols.append(col)
 
     return numeric_cols, categorical_cols
@@ -55,14 +57,14 @@ def identify_column_types(X: pd.DataFrame) -> Tuple[List[str], List[str]]:
 
 def build_numeric_transformer() -> Pipeline:
     """
-    Constrói o pipeline de transformação para colunas numéricas.
+    Builds the transformation pipeline for numeric columns.
 
-    Etapas:
-    1. SimpleImputer com estratégia median (robusto a outliers)
-    2. StandardScaler para normalização
+    Steps:
+    1. SimpleImputer with median strategy (robust to outliers)
+    2. StandardScaler for normalization
 
     Returns:
-        Pipeline de transformação numérica
+        Numeric transformation pipeline
     """
     return Pipeline(
         steps=[
@@ -74,14 +76,14 @@ def build_numeric_transformer() -> Pipeline:
 
 def build_categorical_transformer() -> Pipeline:
     """
-    Constrói o pipeline de transformação para colunas categóricas.
+    Builds the transformation pipeline for categorical columns.
 
-    Etapas:
-    1. SimpleImputer com estratégia most_frequent
-    2. OneHotEncoder com handle_unknown='ignore' para lidar com categorias não vistas
+    Steps:
+    1. SimpleImputer with most_frequent strategy
+    2. OneHotEncoder with handle_unknown='ignore' to handle unseen categories
 
     Returns:
-        Pipeline de transformação categórica
+        Categorical transformation pipeline
     """
     return Pipeline(
         steps=[
@@ -91,7 +93,7 @@ def build_categorical_transformer() -> Pipeline:
                 OneHotEncoder(
                     handle_unknown="ignore",
                     sparse_output=False,
-                    drop="if_binary",  # Evita multicolinearidade para variáveis binárias
+                    drop="if_binary",  # Avoids multicollinearity for binary variables
                 ),
             ),
         ]
@@ -104,51 +106,51 @@ def build_preprocessor(
     categorical_cols: Optional[List[str]] = None,
 ) -> ColumnTransformer:
     """
-    Constrói o ColumnTransformer completo para pré-processamento.
+    Builds the complete ColumnTransformer for preprocessing.
 
-    Se as listas de colunas não forem fornecidas, identifica automaticamente
-    os tipos de colunas baseado nos dtypes do DataFrame.
+    If column lists are not provided, automatically identifies
+    column types based on DataFrame dtypes.
 
-    O preprocessor aplica:
-    - Para numéricas: SimpleImputer(median) + StandardScaler
-    - Para categóricas: SimpleImputer(most_frequent) + OneHotEncoder
+    The preprocessor applies:
+    - For numeric: SimpleImputer(median) + StandardScaler
+    - For categorical: SimpleImputer(most_frequent) + OneHotEncoder
 
     Args:
-        X: DataFrame com as features
-        numeric_cols: Lista opcional de colunas numéricas
-        categorical_cols: Lista opcional de colunas categóricas
+        X: DataFrame with features
+        numeric_cols: Optional list of numeric columns
+        categorical_cols: Optional list of categorical columns
 
     Returns:
-        ColumnTransformer configurado para pré-processamento
+        ColumnTransformer configured for preprocessing
     """
-    # Identifica tipos de colunas se não fornecidos
+    # Identify column types if not provided
     if numeric_cols is None or categorical_cols is None:
         auto_numeric, auto_categorical = identify_column_types(X)
         numeric_cols = numeric_cols if numeric_cols is not None else auto_numeric
-        categorical_cols = categorical_cols if categorical_cols is not None else auto_categorical
+        categorical_cols = (
+            categorical_cols if categorical_cols is not None else auto_categorical
+        )
 
-    # Filtra apenas colunas que existem no DataFrame
+    # Filter only columns that exist in the DataFrame
     numeric_cols = [col for col in numeric_cols if col in X.columns]
     categorical_cols = [col for col in categorical_cols if col in X.columns]
 
-    # Lista de transformadores
+    # List of transformers
     transformers = []
 
     if numeric_cols:
-        transformers.append(
-            ("numeric", build_numeric_transformer(), numeric_cols)
-        )
+        transformers.append(("numeric", build_numeric_transformer(), numeric_cols))
 
     if categorical_cols:
         transformers.append(
             ("categorical", build_categorical_transformer(), categorical_cols)
         )
 
-    # Cria o ColumnTransformer
+    # Create the ColumnTransformer
     preprocessor = ColumnTransformer(
         transformers=transformers,
-        remainder="drop",  # Remove colunas não especificadas
-        verbose_feature_names_out=True,  # Mantém nomes das features
+        remainder="drop",  # Drop unspecified columns
+        verbose_feature_names_out=True,  # Keep feature names
     )
 
     return preprocessor
@@ -158,21 +160,21 @@ def get_feature_names_from_preprocessor(
     preprocessor: ColumnTransformer, X: pd.DataFrame
 ) -> List[str]:
     """
-    Extrai os nomes das features após transformação.
+    Extracts feature names after transformation.
 
-    Útil para interpretação do modelo e análise de importância de features.
+    Useful for model interpretation and feature importance analysis.
 
     Args:
-        preprocessor: ColumnTransformer já treinado (fit)
-        X: DataFrame usado no fit
+        preprocessor: Already trained (fit) ColumnTransformer
+        X: DataFrame used in fit
 
     Returns:
-        Lista com nomes das features transformadas
+        List with transformed feature names
     """
     try:
         return list(preprocessor.get_feature_names_out())
     except Exception:
-        # Fallback para versões mais antigas do sklearn
+        # Fallback for older sklearn versions
         feature_names = []
 
         for name, transformer, columns in preprocessor.transformers_:
@@ -191,14 +193,14 @@ def get_feature_names_from_preprocessor(
 
 def validate_preprocessor(preprocessor: ColumnTransformer, X: pd.DataFrame) -> dict:
     """
-    Valida o preprocessor e retorna informações sobre as transformações.
+    Validates the preprocessor and returns information about transformations.
 
     Args:
-        preprocessor: ColumnTransformer (não precisa estar treinado)
-        X: DataFrame para validação
+        preprocessor: ColumnTransformer (does not need to be trained)
+        X: DataFrame for validation
 
     Returns:
-        Dict com informações sobre o preprocessor
+        Dict with information about the preprocessor
     """
     numeric_cols, categorical_cols = identify_column_types(X)
 

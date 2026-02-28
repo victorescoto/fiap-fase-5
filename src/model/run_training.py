@@ -1,12 +1,12 @@
 """
-Script para executar o treinamento completo do modelo.
+Script to execute complete model training.
 
-Este script:
-1. Carrega o dataset do Excel
-2. Executa o treinamento
-3. Salva o modelo em app/model/
+This script:
+1. Loads the dataset from Excel
+2. Executes training
+3. Saves the model in app/model/
 
-Uso:
+Usage:
     cd /Users/renatomota/Desktop/tc_challenge5/fiap-fase-5
     source .venv/bin/activate
     python -m src.model.run_training
@@ -17,47 +17,47 @@ import pandas as pd
 import sys
 from pathlib import Path
 
-# Adiciona o diretório raiz ao path
+# Add root directory to path
 ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
 
-# Caminho do dataset (ajuste conforme necessário)
+# Dataset path (adjust as needed)
 DATASET_PATH = Path(__file__).parent.parent.parent.parent / \
     "BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
 
-# Alternativa: caminho absoluto
+# Alternative: absolute path
 # DATASET_PATH = "/Users/renatomota/Desktop/tc_challenge5/BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
 
 
 def main():
-    """Executa o pipeline completo de treinamento."""
+    """Executes the complete training pipeline."""
 
     print("=" * 60)
-    print("📂 CARREGANDO DATASET")
+    print("📂 LOADING DATASET")
     print("=" * 60)
-    print(f"   Caminho: {DATASET_PATH}")
+    print(f"   Path: {DATASET_PATH}")
 
     # ========================================
-    # 1. CARREGAMENTO DO DATASET (AQUI!)
+    # 1. DATASET LOADING (HERE!)
     # ========================================
     df = pd.read_excel(DATASET_PATH)
 
-    print(f"   Linhas: {len(df)}")
-    print(f"   Colunas: {len(df.columns)}")
+    print(f"   Rows: {len(df)}")
+    print(f"   Columns: {len(df.columns)}")
 
     # ========================================
-    # 2. TREINAMENTO DO MODELO
+    # 2. MODEL TRAINING
     # ========================================
     pipeline, results = train_model(df, save=True)
 
     # ========================================
-    # 3. RESUMO FINAL
+    # 3. FINAL SUMMARY
     # ========================================
     print("\n" + "=" * 60)
-    print("📊 RESUMO FINAL")
+    print("📊 FINAL SUMMARY")
     print("=" * 60)
-    print(f"   Modelo: {results['model_name']}")
+    print(f"   Model: {results['model_name']}")
 
 
 if __name__ == "__main__":

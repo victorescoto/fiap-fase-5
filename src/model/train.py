@@ -1,10 +1,10 @@
 """
-Módulo de treinamento de modelos para previsão de defasagem escolar.
+Model training module for school delay prediction.
 
-Este módulo contém funções para:
-- Treinar modelo LogisticRegression para classificação multiclasse
-- Realizar validação cruzada estratificada
-- Avaliar e salvar o modelo treinado
+This module contains functions to:
+- Train LogisticRegression model for multiclass classification
+- Perform stratified cross-validation
+- Evaluate and save the trained model
 """
 
 import os
@@ -32,29 +32,29 @@ from .feature_engineering import build_features
 from .preprocessing import build_preprocessor
 from .evaluate import evaluate_model
 
-# Configurações
+# Configuration
 RANDOM_STATE = 42
 TEST_SIZE = 0.2
-N_SPLITS = 5  # Número de folds para cross-validation
+N_SPLITS = 5  # Number of folds for cross-validation
 TARGET_COLUMN = "nivel_defasagem"
 CLASS_ORDER = ["baixo", "medio", "alto"]
 
-# Diretório para salvar modelos
+# Directory to save models
 MODEL_DIR = Path(__file__).parent.parent.parent / "app" / "model"
 
 
 def get_model() -> LogisticRegression:
     """
-    Retorna o modelo LogisticRegression configurado.
+    Returns the configured LogisticRegression model.
 
-    Configurações:
-    - solver='lbfgs': Algoritmo de otimização
-    - max_iter=1000: Iterações máximas para convergência
-    - class_weight='balanced': Ajusta pesos para classes desbalanceadas
-    - random_state=42: Reprodutibilidade
+    Configuration:
+    - solver='lbfgs': Optimization algorithm
+    - max_iter=1000: Maximum iterations for convergence
+    - class_weight='balanced': Adjusts weights for unbalanced classes
+    - random_state=42: Reproducibility
 
     Returns:
-        Instância do LogisticRegression configurada
+        Configured LogisticRegression instance
     """
     return LogisticRegression(
         solver="lbfgs",
@@ -66,18 +66,18 @@ def get_model() -> LogisticRegression:
 
 def create_custom_scorers() -> Dict[str, Any]:
     """
-    Cria scorers para avaliação do modelo.
+    Creates scorers for model evaluation.
 
-    Scorers incluídos:
-    - f1_macro: F1 score macro-averaged (métrica principal)
-    - recall_alto: Recall específico para a classe "alto"
+    Scorers included:
+    - f1_macro: F1 score macro-averaged (main metric)
+    - recall_alto: Recall specific to the "alto" class
 
     Returns:
-        Dict com scorers para cross_validate
+        Dict with scorers for cross_validate
     """
 
     def recall_alto_scorer(y_true, y_pred):
-        """Calcula recall específico para a classe 'alto'."""
+        """Calculates recall specific to 'alto' class."""
         y_true = np.array(y_true)
         y_pred = np.array(y_pred)
         recalls = recall_score(
@@ -101,15 +101,15 @@ def perform_cross_validation(
     y: pd.Series,
 ) -> Dict[str, float]:
     """
-    Realiza validação cruzada estratificada com LogisticRegression.
+    Performs stratified cross-validation with LogisticRegression.
 
     Args:
-        pipeline: Pipeline completo (preprocessor + modelo)
-        X: Features de treino
-        y: Target de treino
+        pipeline: Complete pipeline (preprocessor + model)
+        X: Training features
+        y: Training target
 
     Returns:
-        Dict com métricas da validação cruzada
+        Dict with cross-validation metrics
     """
     cv = StratifiedKFold(n_splits=N_SPLITS, shuffle=True,
                          random_state=RANDOM_STATE)
@@ -148,15 +148,15 @@ def save_model(
     output_dir: Optional[Path] = None,
 ) -> Path:
     """
-    Salva o modelo treinado usando joblib.
+    Saves the trained model using joblib.
 
     Args:
-        pipeline: Pipeline treinado
-        metrics: Dict com métricas de avaliação
-        output_dir: Diretório de saída (default: MODEL_DIR)
+        pipeline: Trained pipeline
+        metrics: Dict with evaluation metrics
+        output_dir: Output directory (default: MODEL_DIR)
 
     Returns:
-        Path para o arquivo salvo
+        Path to the saved file
     """
     if output_dir is None:
         output_dir = MODEL_DIR
@@ -164,11 +164,11 @@ def save_model(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Salva o modelo
+    # Save the model
     model_path = output_dir / "model.joblib"
     joblib.dump(pipeline, model_path)
 
-    # Salva metadados
+    # Save metadata
     metadata = {
         "model_name": "LogisticRegression",
         "metrics": metrics,
@@ -178,8 +178,8 @@ def save_model(
     metadata_path = output_dir / "model_metadata.joblib"
     joblib.dump(metadata, metadata_path)
 
-    print(f"\n✅ Modelo salvo em: {model_path}")
-    print(f"✅ Metadados salvos em: {metadata_path}")
+    print(f"\n✅ Model saved at: {model_path}")
+    print(f"✅ Metadata saved at: {metadata_path}")
 
     return model_path
 
@@ -190,54 +190,54 @@ def train_model(
     output_dir: Optional[Path] = None,
 ) -> Tuple[Pipeline, Dict[str, Any]]:
     """
-    Função principal de treinamento do modelo LogisticRegression.
+    Main LogisticRegression model training function.
 
-    Executa o pipeline completo:
+    Executes the complete pipeline:
     1. Feature engineering
-    2. Split estratificado treino/teste
-    3. Construção do preprocessador
-    4. Validação cruzada
-    5. Treinamento final
-    6. Avaliação no conjunto de teste
-    7. Salvamento do modelo
+    2. Stratified train/test split
+    3. Preprocessor construction
+    4. Cross-validation
+    5. Final training
+    6. Evaluation on test set
+    7. Model saving
 
     Args:
-        df: DataFrame com dados brutos
-        save: Se True, salva o modelo treinado
-        output_dir: Diretório para salvar o modelo
+        df: DataFrame with raw data
+        save: If True, saves the trained model
+        output_dir: Directory to save the model
 
     Returns:
-        Tuple contendo:
-        - Pipeline do modelo treinado
-        - Dict com resultados e métricas
+        Tuple containing:
+        - Trained model pipeline
+        - Dict with results and metrics
     """
     print("\n" + "=" * 60)
-    print("🚀 INICIANDO TREINAMENTO DO MODELO")
-    print("   Modelo: LogisticRegression")
+    print("🚀 STARTING MODEL TRAINING")
+    print("   Model: LogisticRegression")
     print("=" * 60)
 
     # 1. Feature Engineering
-    print("\n📐 Executando Feature Engineering...")
+    print("\n📐 Executing Feature Engineering...")
     X, y = build_features(df, include_target=True)
 
     if y is None:
-        raise ValueError("Target não foi criado. Verifique a coluna 'Defas'")
+        raise ValueError("Target was not created. Check the 'Defas' column")
 
-    # Remove linhas com target missing
+    # Remove rows with missing target
     mask = y.notna()
     X = X[mask].reset_index(drop=True)
     y = y[mask].reset_index(drop=True)
 
-    print(f"  Total de amostras: {len(X)}")
-    print(f"  Total de features: {X.shape[1]}")
-    print(f"\n  Distribuição do target:")
+    print(f"  Total samples: {len(X)}")
+    print(f"  Total features: {X.shape[1]}")
+    print(f"\n  Target distribution:")
     for classe in CLASS_ORDER:
         count = (y == classe).sum()
         pct = count / len(y) * 100
         print(f"    {classe}: {count} ({pct:.1f}%)")
 
-    # 2. Split estratificado
-    print("\n📊 Realizando split treino/teste estratificado...")
+    # 2. Stratified split
+    print("\n📊 Performing stratified train/test split...")
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
@@ -245,15 +245,15 @@ def train_model(
         stratify=y,
         random_state=RANDOM_STATE,
     )
-    print(f"  Treino: {len(X_train)} amostras")
-    print(f"  Teste:  {len(X_test)} amostras")
+    print(f"  Train: {len(X_train)} samples")
+    print(f"  Test:  {len(X_test)} samples")
 
-    # 3. Construção do preprocessador
-    print("\n🔧 Construindo preprocessador...")
+    # 3. Preprocessor construction
+    print("\n🔧 Building preprocessor...")
     preprocessor = build_preprocessor(X_train)
 
-    # 4. Criação do Pipeline
-    print("\n🔬 Criando Pipeline (Preprocessor + LogisticRegression)...")
+    # 4. Pipeline creation
+    print("\n🔬 Creating Pipeline (Preprocessor + LogisticRegression)...")
     pipeline = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
@@ -261,8 +261,8 @@ def train_model(
         ]
     )
 
-    # 5. Validação cruzada
-    print("\n📈 Executando Cross-Validation (5 folds)...")
+    # 5. Cross-validation
+    print("\n📈 Executing Cross-Validation (5 folds)...")
     cv_metrics = perform_cross_validation(pipeline, X_train, y_train)
 
     print(
@@ -274,21 +274,21 @@ def train_model(
     print(
         f"  Accuracy:     {cv_metrics['accuracy_mean']:.4f} ± {cv_metrics['accuracy_std']:.4f}")
 
-    # 6. Treinamento final com todos os dados de treino
-    print("\n🏋️ Treinando modelo final...")
+    # 6. Final training with all training data
+    print("\n🏋️ Training final model...")
     pipeline.fit(X_train, y_train)
 
-    # 7. Avaliação final no conjunto de teste
+    # 7. Final evaluation on test set
     print("\n" + "=" * 60)
-    print("📋 AVALIAÇÃO FINAL NO CONJUNTO DE TESTE")
+    print("📋 FINAL EVALUATION ON TEST SET")
     print("=" * 60)
     test_metrics = evaluate_model(pipeline, X_test, y_test)
 
-    # 8. Salvamento do modelo
+    # 8. Model saving
     if save:
         save_model(pipeline, test_metrics, output_dir)
 
-    # Prepara resultados
+    # Prepare results
     results = {
         "model_name": "LogisticRegression",
         "cv_metrics": cv_metrics,
@@ -299,7 +299,7 @@ def train_model(
     }
 
     print("\n" + "=" * 60)
-    print("✅ TREINAMENTO CONCLUÍDO COM SUCESSO!")
+    print("✅ TRAINING COMPLETED SUCCESSFULLY!")
     print("=" * 60)
 
     return pipeline, results
@@ -307,15 +307,15 @@ def train_model(
 
 def load_model(model_path: Optional[Path] = None) -> Tuple[Pipeline, Dict[str, Any]]:
     """
-    Carrega um modelo salvo.
+    Loads a saved model.
 
     Args:
-        model_path: Path para o arquivo do modelo (default: MODEL_DIR/model.joblib)
+        model_path: Path to the model file (default: MODEL_DIR/model.joblib)
 
     Returns:
-        Tuple contendo:
-        - Pipeline do modelo carregado
-        - Dict com metadados
+        Tuple containing:
+        - Loaded model pipeline
+        - Dict with metadata
     """
     if model_path is None:
         model_path = MODEL_DIR / "model.joblib"
@@ -324,7 +324,7 @@ def load_model(model_path: Optional[Path] = None) -> Tuple[Pipeline, Dict[str, A
     metadata_path = model_path.parent / "model_metadata.joblib"
 
     if not model_path.exists():
-        raise FileNotFoundError(f"Modelo não encontrado: {model_path}")
+        raise FileNotFoundError(f"Model not found: {model_path}")
 
     pipeline = joblib.load(model_path)
     metadata = {}

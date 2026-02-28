@@ -1,11 +1,11 @@
 """
-Feature Engineering para previsão de defasagem escolar.
+Feature Engineering for school delay prediction.
 
-Este módulo contém funções para:
-- Criar a coluna target (nivel_defasagem)
-- Criar features derivadas
-- Remover colunas que causam data leakage
-- Limpar e preparar o DataFrame para treinamento
+This module contains functions to:
+- Create the target column (nivel_defasagem)
+- Create derived features
+- Remove columns that cause data leakage
+- Clean and prepare the DataFrame for training
 """
 
 import pandas as pd
@@ -13,32 +13,32 @@ import numpy as np
 from typing import Tuple, List, Optional
 
 
-# Colunas que causam data leakage (contêm informação do target ou são identificadores)
+# Columns that cause data leakage (contain target information or are identifiers)
 LEAKAGE_COLUMNS = [
-    # Identificadores pessoais
+    # Personal identifiers
     "RA",
     "Nome",
     "Turma",
-    # Colunas relacionadas diretamente ao target
-    "Defas",  # É usada para criar o target
-    "Fase ideal",  # Relacionada diretamente à defasagem
-    # Avaliadores (podem conter viés ou informação futura)
+    # Columns directly related to the target
+    "Defas",  # Used to create the target
+    "Fase ideal",  # Directly related to delay
+    # Evaluators (may contain bias or future information)
     "Avaliador1",
     "Avaliador2",
     "Avaliador3",
     "Avaliador4",
-    # Recomendações dos avaliadores (decisões baseadas em análise completa)
+    # Evaluator recommendations (decisions based on complete analysis)
     "Rec Av1",
     "Rec Av2",
     "Rec Av3",
     "Rec Av4",
-    # Colunas de destaque (derivadas de análise)
+    # Highlight columns (derived from analysis)
     "Destaque IEG",
     "Destaque IDA",
     "Destaque IPV",
 ]
 
-# Mapeamento das pedras para valores numéricos (ordem de progressão)
+# Mapping stones to numeric values (progression order)
 PEDRA_MAPPING = {
     "Quartzo": 1,
     "Ágata": 2,
@@ -46,36 +46,36 @@ PEDRA_MAPPING = {
     "Topázio": 4,
 }
 
-# Limites para classificação da defasagem
-# Baseado na distribuição dos dados:
-# - Valores >= 0: aluno na fase ideal ou adiantado (baixo)
-# - Valores -1 ou -2: defasagem moderada (medio)
-# - Valores <= -3: defasagem severa (alto)
+# Thresholds for delay classification
+# Based on data distribution:
+# - Values >= 0: student at ideal phase or ahead (baixo)
+# - Values -1 or -2: moderate delay (medio)
+# - Values <= -3: severe delay (alto)
 DEFASAGEM_THRESHOLDS = {
     "baixo": (0, float("inf")),  # Defas >= 0
-    "medio": (-2, -1),  # Defas entre -2 e -1
+    "medio": (-2, -1),  # Defas between -2 and -1
     "alto": (float("-inf"), -3),  # Defas <= -3
 }
 
 
 def create_target_column(df: pd.DataFrame, column: str = "Defas") -> pd.Series:
     """
-    Cria a coluna target 'nivel_defasagem' baseada na coluna de defasagem.
+    Creates the target column 'nivel_defasagem' based on the delay column.
 
-    A classificação é feita da seguinte forma:
-    - "baixo": defasagem >= 0 (aluno na fase ideal ou adiantado)
-    - "medio": defasagem entre -1 e -2
-    - "alto": defasagem <= -3 (defasagem severa)
+    The classification is done as follows:
+    - "baixo": delay >= 0 (student at ideal phase or ahead)
+    - "medio": delay between -1 and -2
+    - "alto": delay <= -3 (severe delay)
 
     Args:
-        df: DataFrame com a coluna de defasagem
-        column: Nome da coluna de defasagem (default: "Defas")
+        df: DataFrame with the delay column
+        column: Name of the delay column (default: "Defas")
 
     Returns:
-        pd.Series: Série com os níveis de defasagem ("baixo", "medio", "alto")
+        pd.Series: Series with delay levels ("baixo", "medio", "alto")
     """
     if column not in df.columns:
-        raise ValueError(f"Coluna '{column}' não encontrada no DataFrame")
+        raise ValueError(f"Column '{column}' not found in DataFrame")
 
     def classify_defasagem(value: int) -> str:
         if pd.isna(value):
@@ -92,13 +92,13 @@ def create_target_column(df: pd.DataFrame, column: str = "Defas") -> pd.Series:
 
 def _encode_pedra_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Converte colunas de 'Pedra' para valores numéricos.
+    Converts 'Pedra' columns to numeric values.
 
     Args:
-        df: DataFrame com colunas Pedra
+        df: DataFrame with Pedra columns
 
     Returns:
-        DataFrame com colunas Pedra convertidas para numérico
+        DataFrame with Pedra columns converted to numeric
     """
     pedra_cols = [col for col in df.columns if col.startswith("Pedra")]
 
@@ -111,32 +111,32 @@ def _encode_pedra_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def _create_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Cria features temporais baseadas na progressão do aluno.
+    Creates temporal features based on student progression.
 
-    Features criadas:
-    - tempo_no_programa: Anos desde o ingresso até 2022
-    - idade_ingresso: Idade quando ingressou no programa
-    - pedra_evolucao_20_21: Diferença entre pedras 2020 e 2021
-    - pedra_evolucao_21_22: Diferença entre pedras 2021 e 2022
-    - pedra_evolucao_total: Evolução total nas pedras
+    Features created:
+    - tempo_no_programa: Years since entry until 2022
+    - idade_ingresso: Age when joined the program
+    - pedra_evolucao_20_21: Difference between 2020 and 2021 stones
+    - pedra_evolucao_21_22: Difference between 2021 and 2022 stones
+    - pedra_evolucao_total: Total evolution in stones
 
     Args:
-        df: DataFrame original
+        df: Original DataFrame
 
     Returns:
-        DataFrame com novas features temporais
+        DataFrame with new temporal features
     """
     df = df.copy()
 
-    # Tempo no programa (considerando dados de 2022)
+    # Time in program (considering 2022 data)
     if "Ano ingresso" in df.columns:
         df["tempo_no_programa"] = 2022 - df["Ano ingresso"]
 
-    # Idade quando ingressou
+    # Age when joined
     if "Ano nasc" in df.columns and "Ano ingresso" in df.columns:
         df["idade_ingresso"] = df["Ano ingresso"] - df["Ano nasc"]
 
-    # Evolução nas pedras (se as colunas encoded existirem)
+    # Evolution in stones (if encoded columns exist)
     if "Pedra 20_encoded" in df.columns and "Pedra 21_encoded" in df.columns:
         df["pedra_evolucao_20_21"] = df["Pedra 21_encoded"] - df["Pedra 20_encoded"]
 
@@ -151,23 +151,23 @@ def _create_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
 
 def _create_performance_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Cria features baseadas em performance acadêmica.
+    Creates features based on academic performance.
 
-    Features criadas:
-    - media_disciplinas: Média entre Matemática, Português e Inglês
-    - desempenho_geral: Média ponderada dos indicadores
-    - ratio_indicadores: Razão entre diferentes indicadores
-    - num_avaliacoes_positivas: Contagem de avaliações positivas
+    Features created:
+    - media_disciplinas: Average between Math, Portuguese and English
+    - desempenho_geral: Weighted average of indicators
+    - ratio_indicadores: Ratio between different indicators
+    - num_avaliacoes_positivas: Count of positive evaluations
 
     Args:
-        df: DataFrame original
+        df: Original DataFrame
 
     Returns:
-        DataFrame com novas features de performance
+        DataFrame with new performance features
     """
     df = df.copy()
 
-    # Média das disciplinas
+    # Average of subjects
     disciplinas = ["Matem", "Portug", "Inglês"]
     cols_presentes = [col for col in disciplinas if col in df.columns]
     if cols_presentes:
@@ -176,20 +176,20 @@ def _create_performance_features(df: pd.DataFrame) -> pd.DataFrame:
         df["min_disciplina"] = df[cols_presentes].min(axis=1, skipna=True)
         df["max_disciplina"] = df[cols_presentes].max(axis=1, skipna=True)
 
-    # Indicadores compostos
+    # Composite indicators
     indicadores = ["IAA", "IEG", "IPS", "IDA", "IPV", "IAN"]
     ind_presentes = [col for col in indicadores if col in df.columns]
     if ind_presentes:
         df["media_indicadores"] = df[ind_presentes].mean(axis=1, skipna=True)
         df["std_indicadores"] = df[ind_presentes].std(axis=1, skipna=True)
 
-    # Razão INDE vs média de indicadores
+    # INDE ratio vs average of indicators
     if "INDE 22" in df.columns and "media_indicadores" in df.columns:
         df["ratio_inde_indicadores"] = df["INDE 22"] / (
             df["media_indicadores"] + 1e-6
-        )  # Evita divisão por zero
+        )  # Avoid division by zero
 
-    # Comparação entre indicadores específicos
+    # Comparison between specific indicators
     if "IAA" in df.columns and "IDA" in df.columns:
         df["diff_iaa_ida"] = df["IAA"] - df["IDA"]
 
@@ -201,29 +201,29 @@ def _create_performance_features(df: pd.DataFrame) -> pd.DataFrame:
 
 def _create_engagement_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Cria features relacionadas ao engajamento do aluno.
+    Creates features related to student engagement.
 
-    Features criadas:
-    - indicado_bin: Versão binária da coluna Indicado
-    - atingiu_pv_bin: Versão binária da coluna Atingiu PV
-    - psicologia_flag: Flag indicando se requer avaliação psicológica
+    Features created:
+    - indicado_bin: Binary version of Indicado column
+    - atingiu_pv_bin: Binary version of Atingiu PV column
+    - psicologia_flag: Flag indicating if requires psychological evaluation
 
     Args:
-        df: DataFrame original
+        df: Original DataFrame
 
     Returns:
-        DataFrame com novas features de engajamento
+        DataFrame with new engagement features
     """
     df = df.copy()
 
-    # Conversão de colunas binárias
+    # Conversion of binary columns
     if "Indicado" in df.columns:
         df["indicado_bin"] = (df["Indicado"].str.lower() == "sim").astype(int)
 
     if "Atingiu PV" in df.columns:
         df["atingiu_pv_bin"] = (df["Atingiu PV"].str.lower() == "sim").astype(int)
 
-    # Flag de psicologia
+    # Psychology flag
     if "Rec Psicologia" in df.columns:
         df["psicologia_requer_avaliacao"] = (
             df["Rec Psicologia"].str.lower().str.contains("requer", na=False)
@@ -236,25 +236,25 @@ def _remove_leakage_columns(
     df: pd.DataFrame, additional_columns: Optional[List[str]] = None
 ) -> pd.DataFrame:
     """
-    Remove colunas que podem causar data leakage.
+    Removes columns that may cause data leakage.
 
     Args:
-        df: DataFrame original
-        additional_columns: Lista adicional de colunas para remover
+        df: Original DataFrame
+        additional_columns: Additional list of columns to remove
 
     Returns:
-        DataFrame sem as colunas de leakage
+        DataFrame without leakage columns
     """
     columns_to_remove = LEAKAGE_COLUMNS.copy()
 
     if additional_columns:
         columns_to_remove.extend(additional_columns)
 
-    # Remove colunas originais de Pedra (mantém apenas as encoded)
+    # Remove original Pedra columns (keep only encoded ones)
     pedra_cols = [col for col in df.columns if col.startswith("Pedra") and "_encoded" not in col]
     columns_to_remove.extend(pedra_cols)
 
-    # Filtra apenas colunas que existem no DataFrame
+    # Filter only columns that exist in the DataFrame
     columns_to_remove = [col for col in columns_to_remove if col in df.columns]
 
     return df.drop(columns=columns_to_remove, errors="ignore")
@@ -264,45 +264,45 @@ def build_features(
     df: pd.DataFrame, include_target: bool = True
 ) -> Tuple[pd.DataFrame, Optional[pd.Series]]:
     """
-    Função principal de feature engineering.
+    Main feature engineering function.
 
-    Executa todas as transformações de features:
-    1. Cria a coluna target (nivel_defasagem)
-    2. Codifica colunas de Pedra
-    3. Cria features temporais
-    4. Cria features de performance
-    5. Cria features de engajamento
-    6. Remove colunas de leakage
+    Executes all feature transformations:
+    1. Creates target column (nivel_defasagem)
+    2. Encodes Pedra columns
+    3. Creates temporal features
+    4. Creates performance features
+    5. Creates engagement features
+    6. Removes leakage columns
 
     Args:
-        df: DataFrame original com dados brutos
-        include_target: Se True, retorna também a série target
+        df: Original DataFrame with raw data
+        include_target: If True, also returns target series
 
     Returns:
-        Tuple contendo:
-        - DataFrame processado com features
-        - Series com target (se include_target=True, senão None)
+        Tuple containing:
+        - Processed DataFrame with features
+        - Series with target (if include_target=True, otherwise None)
     """
     df = df.copy()
 
-    # Cria target antes de qualquer processamento
+    # Create target before any processing
     target = None
     if include_target:
         if "Defas" not in df.columns:
-            raise ValueError("Coluna 'Defas' necessária para criar target")
+            raise ValueError("Column 'Defas' required to create target")
         target = create_target_column(df)
 
-    # Pipeline de feature engineering
+    # Feature engineering pipeline
     df = _encode_pedra_columns(df)
     df = _create_temporal_features(df)
     df = _create_performance_features(df)
     df = _create_engagement_features(df)
 
-    # Remove colunas de leakage
+    # Remove leakage columns
     df = _remove_leakage_columns(df)
 
-    # Remove colunas categóricas originais que foram processadas
-    # (Indicado, Atingiu PV, Rec Psicologia - já criamos versões binárias)
+    # Remove original categorical columns that were processed
+    # (Indicado, Atingiu PV, Rec Psicologia - we already created binary versions)
     cols_processed = ["Indicado", "Atingiu PV", "Rec Psicologia"]
     df = df.drop(columns=[c for c in cols_processed if c in df.columns], errors="ignore")
 
@@ -311,10 +311,10 @@ def build_features(
 
 def get_feature_names() -> dict:
     """
-    Retorna dicionário com categorização das features.
+    Returns dictionary with feature categorization.
 
     Returns:
-        Dict com categorias de features e suas descrições
+        Dict with feature categories and their descriptions
     """
     return {
         "temporais": [

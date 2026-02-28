@@ -1,12 +1,12 @@
 """
-Módulo de Machine Learning para previsão de defasagem escolar.
+Machine Learning module for school delay prediction.
 
-Este módulo contém funções para:
-- feature_engineering: Criação e transformação de features
-- preprocessing: Pré-processamento de dados
-- train: Treinamento e seleção de modelos
-- evaluate: Avaliação de modelos
-- predict: Inferência e predições (para integração com API)
+This module contains functions for:
+- feature_engineering: Feature creation and transformation
+- preprocessing: Data preprocessing
+- train: Model training and selection
+- evaluate: Model evaluation
+- predict: Inference and predictions (for API integration)
 """
 
 from .feature_engineering import build_features, create_target_column

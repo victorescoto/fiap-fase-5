@@ -1,11 +1,11 @@
 """
-Módulo de avaliação de modelos para previsão de defasagem escolar.
+Model evaluation module for school delay prediction.
 
-Este módulo contém funções para:
-- Avaliar modelos com múltiplas métricas
-- Gerar relatórios de classificação
-- Calcular e exibir matriz de confusão
-- Calcular recall por classe
+This module contains functions to:
+- Evaluate models with multiple metrics
+- Generate classification reports
+- Calculate and display confusion matrix
+- Calculate recall per class
 """
 
 from typing import Dict, Any, Optional, Union
@@ -22,7 +22,7 @@ from sklearn.metrics import (
 )
 from sklearn.pipeline import Pipeline
 
-# Ordem das classes para consistência
+# Class order for consistency
 CLASS_ORDER = ["baixo", "medio", "alto"]
 
 
@@ -31,14 +31,14 @@ def calculate_metrics(
     y_pred: Union[pd.Series, np.ndarray],
 ) -> Dict[str, float]:
     """
-    Calcula todas as métricas de avaliação.
+    Calculates all evaluation metrics.
 
     Args:
-        y_true: Labels verdadeiros
-        y_pred: Labels preditos
+        y_true: True labels
+        y_pred: Predicted labels
 
     Returns:
-        Dict com todas as métricas calculadas
+        Dict with all calculated metrics
     """
     metrics = {
         "accuracy": accuracy_score(y_true, y_pred),
@@ -52,21 +52,21 @@ def calculate_metrics(
         ),
     }
 
-    # Recall por classe
+    # Recall per class
     recalls = recall_score(
         y_true, y_pred, average=None, labels=CLASS_ORDER
     )
     for i, classe in enumerate(CLASS_ORDER):
         metrics[f"recall_{classe}"] = recalls[i]
 
-    # Precision por classe
+    # Precision per class
     precisions = precision_score(
         y_true, y_pred, average=None, labels=CLASS_ORDER
     )
     for i, classe in enumerate(CLASS_ORDER):
         metrics[f"precision_{classe}"] = precisions[i]
 
-    # F1 por classe
+    # F1 per class
     f1s = f1_score(y_true, y_pred, average=None, labels=CLASS_ORDER)
     for i, classe in enumerate(CLASS_ORDER):
         metrics[f"f1_{classe}"] = f1s[i]
@@ -79,14 +79,14 @@ def format_confusion_matrix(
     y_pred: Union[pd.Series, np.ndarray],
 ) -> pd.DataFrame:
     """
-    Formata a matriz de confusão como DataFrame para melhor visualização.
+    Formats the confusion matrix as DataFrame for better visualization.
 
     Args:
-        y_true: Labels verdadeiros
-        y_pred: Labels preditos
+        y_true: True labels
+        y_pred: Predicted labels
 
     Returns:
-        DataFrame com a matriz de confusão formatada
+        DataFrame with formatted confusion matrix
     """
     cm = confusion_matrix(y_true, y_pred, labels=CLASS_ORDER)
 
@@ -105,55 +105,55 @@ def print_evaluation_report(
     metrics: Dict[str, float],
 ) -> None:
     """
-    Imprime relatório completo de avaliação.
+    Prints complete evaluation report.
 
     Args:
-        y_true: Labels verdadeiros
-        y_pred: Labels preditos
-        metrics: Dict com métricas calculadas
+        y_true: True labels
+        y_pred: Predicted labels
+        metrics: Dict with calculated metrics
     """
     print("\n" + "=" * 60)
-    print("📊 RELATÓRIO DE CLASSIFICAÇÃO")
+    print("📊 CLASSIFICATION REPORT")
     print("=" * 60)
 
-    # Classification report do sklearn
+    # Classification report from sklearn
     print("\n" + classification_report(y_true,
           y_pred, labels=CLASS_ORDER, digits=4))
 
-    # Matriz de confusão
+    # Confusion matrix
     print("\n" + "-" * 60)
-    print("🔢 MATRIZ DE CONFUSÃO")
+    print("🔢 CONFUSION MATRIX")
     print("-" * 60)
     cm_df = format_confusion_matrix(y_true, y_pred)
     print(cm_df.to_string())
 
-    # Métricas principais
+    # Main metrics
     print("\n" + "-" * 60)
-    print("📈 MÉTRICAS PRINCIPAIS")
+    print("📈 MAIN METRICS")
     print("-" * 60)
     print(f"  F1 Macro:     {metrics['f1_macro']:.4f}")
     print(f"  F1 Weighted:  {metrics['f1_weighted']:.4f}")
     print(f"  Accuracy:     {metrics['accuracy']:.4f}")
 
-    # Recall por classe
+    # Recall per class
     print("\n" + "-" * 60)
-    print("🎯 RECALL POR CLASSE")
+    print("🎯 RECALL PER CLASS")
     print("-" * 60)
     for classe in CLASS_ORDER:
         recall = metrics[f"recall_{classe}"]
         print(f"  {classe.capitalize():6}: {recall:.4f}")
 
-    # Precision por classe
+    # Precision per class
     print("\n" + "-" * 60)
-    print("🎯 PRECISION POR CLASSE")
+    print("🎯 PRECISION PER CLASS")
     print("-" * 60)
     for classe in CLASS_ORDER:
         precision = metrics[f"precision_{classe}"]
         print(f"  {classe.capitalize():6}: {precision:.4f}")
 
-    # F1 por classe
+    # F1 per class
     print("\n" + "-" * 60)
-    print("🎯 F1 POR CLASSE")
+    print("🎯 F1 PER CLASS")
     print("-" * 60)
     for classe in CLASS_ORDER:
         f1 = metrics[f"f1_{classe}"]
@@ -167,30 +167,30 @@ def evaluate_model(
     verbose: bool = True,
 ) -> Dict[str, float]:
     """
-    Avalia um modelo treinado no conjunto de teste.
+    Evaluates a trained model on the test set.
 
-    Calcula e imprime (se verbose=True):
-    - Classification report completo
-    - Matriz de confusão
-    - F1 macro (métrica principal)
-    - Recall por classe
+    Calculates and prints (if verbose=True):
+    - Complete classification report
+    - Confusion matrix
+    - F1 macro (main metric)
+    - Recall per class
 
     Args:
-        model: Pipeline treinado (preprocessor + classifier)
-        X_test: Features de teste
-        y_test: Target de teste
-        verbose: Se True, imprime relatórios
+        model: Trained pipeline (preprocessor + classifier)
+        X_test: Test features
+        y_test: Test target
+        verbose: If True, prints reports
 
     Returns:
-        Dict com todas as métricas calculadas
+        Dict with all calculated metrics
     """
-    # Realiza predições
+    # Make predictions
     y_pred = model.predict(X_test)
 
-    # Calcula métricas
+    # Calculate metrics
     metrics = calculate_metrics(y_test, y_pred)
 
-    # Imprime relatório se verbose
+    # Print report if verbose
     if verbose:
         print_evaluation_report(y_test, y_pred, metrics)
 
@@ -202,22 +202,22 @@ def get_predictions_with_probabilities(
     X: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Retorna predições com probabilidades para cada classe.
+    Returns predictions with probabilities for each class.
 
-    Útil para análise de incerteza e threshold tuning.
+    Useful for uncertainty analysis and threshold tuning.
 
     Args:
-        model: Pipeline treinado
-        X: Features para predição
+        model: Trained pipeline
+        X: Features for prediction
 
     Returns:
-        DataFrame com predições e probabilidades
+        DataFrame with predictions and probabilities
     """
     predictions = model.predict(X)
 
     result = pd.DataFrame({"prediction": predictions})
 
-    # Adiciona probabilidades se disponíveis
+    # Add probabilities if available
     if hasattr(model, "predict_proba"):
         try:
             probas = model.predict_proba(X)
@@ -236,23 +236,23 @@ def analyze_errors(
     feature_names: Optional[list] = None,
 ) -> Dict[str, pd.DataFrame]:
     """
-    Analisa os erros de predição do modelo.
+    Analyzes model prediction errors.
 
     Args:
-        model: Pipeline treinado
-        X_test: Features de teste
-        y_test: Target de teste
-        feature_names: Lista de nomes das features
+        model: Trained pipeline
+        X_test: Test features
+        y_test: Test target
+        feature_names: List of feature names
 
     Returns:
-        Dict com DataFrames de análise de erros
+        Dict with error analysis DataFrames
     """
     y_pred = model.predict(X_test)
 
-    # Identifica erros
+    # Identify errors
     errors_mask = y_test != y_pred
 
-    # DataFrame com informações de erro
+    # DataFrame with error information
     error_analysis = pd.DataFrame(
         {
             "y_true": y_test,
@@ -261,7 +261,7 @@ def analyze_errors(
         }
     )
 
-    # Matriz de tipos de erro
+    # Matrix of error types
     error_types = pd.crosstab(
         error_analysis[error_analysis["is_error"]]["y_true"],
         error_analysis[error_analysis["is_error"]]["y_pred"],
@@ -269,7 +269,7 @@ def analyze_errors(
         colnames=["Predito"],
     )
 
-    # Resumo por classe
+    # Summary per class
     summary = []
     for classe in CLASS_ORDER:
         mask_classe = y_test == classe
@@ -301,17 +301,17 @@ def compare_model_evaluations(
     evaluations: Dict[str, Dict[str, float]],
 ) -> pd.DataFrame:
     """
-    Compara avaliações de múltiplos modelos em formato tabular.
+    Compares evaluations of multiple models in tabular format.
 
     Args:
-        evaluations: Dict com nome do modelo e suas métricas
+        evaluations: Dict with model name and its metrics
 
     Returns:
-        DataFrame comparativo
+        Comparative DataFrame
     """
     comparison = pd.DataFrame(evaluations).T
 
-    # Ordena por F1 macro
+    # Sort by F1 macro
     comparison = comparison.sort_values("f1_macro", ascending=False)
 
     return comparison
