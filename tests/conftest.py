@@ -12,15 +12,42 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
+# ------------------------------------------------------------------
+# Metadata helpers
+# ------------------------------------------------------------------
+
+_BASE_METADATA: dict = {
+    "version": "unknown",
+    "metrics": {},
+    "features": [],
+}
+
+_MODEL_METADATA: dict = {
+    "version": "1.0.0-test",
+    "metrics": {"accuracy": 0.95},
+    "features": ["numeric__feature_1", "numeric__feature_2"],
+    "baseline_stats": {
+        "prediction_distribution": {
+            "baixo": 0.60,
+            "medio": 0.30,
+            "alto": 0.10,
+        },
+        "avg_confidence": 0.85,
+        "total_samples": 100,
+    },
+}
+
+
+# ------------------------------------------------------------------
+# Clients
+# ------------------------------------------------------------------
+
 @pytest.fixture
 def client() -> Generator[TestClient]:
     """TestClient with no model loaded (degraded mode)."""
     with (
         patch("app.main.load_model", return_value=None),
-        patch(
-            "app.main.load_metadata",
-            return_value={"version": "unknown", "metrics": {}, "features": []},
-        ),
+        patch("app.main.load_metadata", return_value={**_BASE_METADATA}),
         TestClient(app) as c,
     ):
         yield c
@@ -30,22 +57,17 @@ def client() -> Generator[TestClient]:
 def mock_model() -> MagicMock:
     """A mock sklearn-like model with predict and predict_proba."""
     model = MagicMock()
-    model.predict.return_value = np.array([1])
-    model.predict_proba.return_value = np.array([[0.2, 0.8]])
+    model.predict.return_value = np.array(["baixo"])
+    model.predict_proba.return_value = np.array([[0.8, 0.15, 0.05]])
     return model
 
 
 @pytest.fixture
 def client_with_model(mock_model: MagicMock) -> Generator[TestClient]:
-    """TestClient with a mock model loaded."""
-    metadata = {
-        "version": "1.0.0-test",
-        "metrics": {"accuracy": 0.95},
-        "features": ["feature_1", "feature_2"],
-    }
+    """TestClient with a mock model loaded and baseline stats for monitoring."""
     with (
         patch("app.main.load_model", return_value=mock_model),
-        patch("app.main.load_metadata", return_value=metadata),
+        patch("app.main.load_metadata", return_value={**_MODEL_METADATA}),
         TestClient(app) as c,
     ):
         yield c
