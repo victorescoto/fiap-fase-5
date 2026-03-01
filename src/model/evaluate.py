@@ -45,32 +45,38 @@ def calculate_metrics(
     """
     metrics = {
         "accuracy": accuracy_score(y_true, y_pred),
-        "f1_macro": f1_score(y_true, y_pred, average="macro", labels=CLASS_ORDER),
-        "f1_weighted": f1_score(y_true, y_pred, average="weighted", labels=CLASS_ORDER),
+        "f1_macro": f1_score(
+            y_true, y_pred, average="macro", labels=CLASS_ORDER, zero_division=0,
+        ),
+        "f1_weighted": f1_score(
+            y_true, y_pred, average="weighted", labels=CLASS_ORDER, zero_division=0,
+        ),
         "precision_macro": precision_score(
-            y_true, y_pred, average="macro", labels=CLASS_ORDER
+            y_true, y_pred, average="macro", labels=CLASS_ORDER, zero_division=0,
         ),
         "recall_macro": recall_score(
-            y_true, y_pred, average="macro", labels=CLASS_ORDER
+            y_true, y_pred, average="macro", labels=CLASS_ORDER, zero_division=0,
         ),
     }
 
     # Recall per class
     recalls = recall_score(
-        y_true, y_pred, average=None, labels=CLASS_ORDER
+        y_true, y_pred, average=None, labels=CLASS_ORDER, zero_division=0,
     )
     for i, classe in enumerate(CLASS_ORDER):
         metrics[f"recall_{classe}"] = recalls[i]
 
     # Precision per class
     precisions = precision_score(
-        y_true, y_pred, average=None, labels=CLASS_ORDER
+        y_true, y_pred, average=None, labels=CLASS_ORDER, zero_division=0,
     )
     for i, classe in enumerate(CLASS_ORDER):
         metrics[f"precision_{classe}"] = precisions[i]
 
     # F1 per class
-    f1s = f1_score(y_true, y_pred, average=None, labels=CLASS_ORDER)
+    f1s = f1_score(
+        y_true, y_pred, average=None, labels=CLASS_ORDER, zero_division=0,
+    )
     for i, classe in enumerate(CLASS_ORDER):
         metrics[f"f1_{classe}"] = f1s[i]
 
@@ -121,7 +127,7 @@ def print_evaluation_report(
 
     # Classification report from sklearn
     logger.info("\n" + classification_report(y_true,
-          y_pred, labels=CLASS_ORDER, digits=4))
+          y_pred, labels=CLASS_ORDER, digits=4, zero_division=0))
 
     # Confusion matrix
     logger.info("\n" + "-" * 60)
