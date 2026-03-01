@@ -22,6 +22,8 @@ LEAKAGE_COLUMNS = [
     # Columns directly related to the target
     "Defas",  # Used to create the target
     "Fase ideal",  # Directly related to delay
+    # INDE (composite index computed from the same indicators that feed Defas)
+    "INDE 22",
     # Evaluators (may contain bias or future information)
     "Avaliador1",
     "Avaliador2",
@@ -36,6 +38,14 @@ LEAKAGE_COLUMNS = [
     "Destaque IEG",
     "Destaque IDA",
     "Destaque IPV",
+    # Pedra (stone tier) columns — classification tiers that encode the same
+    # performance data used to compute Defas, causing circular leakage
+    "Pedra 20_encoded",
+    "Pedra 21_encoded",
+    "Pedra 22_encoded",
+    "pedra_evolucao_20_21",
+    "pedra_evolucao_21_22",
+    "pedra_evolucao_total",
 ]
 
 # Mapping stones to numeric values (progression order)
@@ -183,11 +193,11 @@ def _create_performance_features(df: pd.DataFrame) -> pd.DataFrame:
         df["media_indicadores"] = df[ind_presentes].mean(axis=1, skipna=True)
         df["std_indicadores"] = df[ind_presentes].std(axis=1, skipna=True)
 
-    # INDE ratio vs average of indicators
-    if "INDE 22" in df.columns and "media_indicadores" in df.columns:
-        df["ratio_inde_indicadores"] = df["INDE 22"] / (
-            df["media_indicadores"] + 1e-6
-        )  # Avoid division by zero
+    # INDE ratio vs average of indicators (skipped: INDE 22 is a leakage column)
+    # if "INDE 22" in df.columns and "media_indicadores" in df.columns:
+    #     df["ratio_inde_indicadores"] = df["INDE 22"] / (
+    #         df["media_indicadores"] + 1e-6
+    #     )
 
     # Comparison between specific indicators
     if "IAA" in df.columns and "IDA" in df.columns:
@@ -339,10 +349,5 @@ def get_feature_names() -> dict:
             "indicado_bin",
             "atingiu_pv_bin",
             "psicologia_requer_avaliacao",
-        ],
-        "pedras_encoded": [
-            "Pedra 20_encoded",
-            "Pedra 21_encoded",
-            "Pedra 22_encoded",
         ],
     }
