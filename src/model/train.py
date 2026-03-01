@@ -219,6 +219,7 @@ def save_model(
             "cv_f1_std": training_info.get("cv_f1_std", 0.0),
         },
         "features": feature_names,
+        "input_features": training_info.get("input_features", []),
         "class_order": CLASS_ORDER,
         "hyperparameters": {
             "random_state": RANDOM_STATE,
@@ -367,6 +368,7 @@ def train_model(
         "cv_f1_std": cv_metrics["f1_macro_std"],
         "cv_recall_macro_mean": cv_metrics["recall_macro_mean"],
         "cv_recall_alto_mean": cv_metrics["recall_alto_mean"],
+        "input_features": X_train.columns.tolist(),
         "y_test_pred": y_test_pred,
         "y_test_proba": y_test_proba,
     }
