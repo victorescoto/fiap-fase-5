@@ -44,14 +44,17 @@ app/
 ├── main.py                     # Aplicação FastAPI, lifespan, middlewares
 ├── routes.py                   # Endpoints da API
 ├── schemas.py                  # Modelos Pydantic (request/response)
+├── services.py                 # Lógica de predição (camada de serviço)
+├── validation.py               # Validação de features de entrada
 ├── model_loader.py             # Carregamento do modelo e metadados
 ├── monitoring.py               # Logging de predições e detecção de drift
 ├── logging_config.py           # Configuração de logging JSON
 └── model/
-    ├── model.pkl               # Modelo serializado
-    └── model_metadata.json     # Metadados do modelo
+    ├── model.joblib             # Modelo serializado
+    ├── model_metadata.joblib    # Metadados serializados (joblib)
+    └── model_metadata.json      # Metadados do modelo (JSON)
 dashboard/
-└── app.py                      # Dashboard Streamlit (drift monitoring)
+└── app.py                      # Dashboard Streamlit (monitoramento)
 notebooks/
 └── analise-exploratoria.ipynb  # Análise exploratória dos dados
 src/
@@ -107,8 +110,9 @@ pyproject.toml
 
 ### 5. Serialização (`src/model/train.py`)
 
-- Modelo salvo em `app/model/model.pkl` (pickle)
-- Metadados salvos em `app/model/model_metadata.json` (JSON)
+- Modelo salvo em `app/model/model.joblib` (joblib)
+- Metadados salvos em `app/model/model_metadata.json` (JSON) e
+  `app/model/model_metadata.joblib` (joblib)
 
 ### 6. Serving (`app/`)
 
@@ -193,11 +197,18 @@ O modelo treinado será salvo em `app/model/model.pkl` e os metadados em
 uv run streamlit run dashboard/app.py
 ```
 
-O dashboard estará disponível em http://localhost:8501 e exibe:
-- Status do modelo e métricas
-- Distribuição de predições (baseline vs. atual)
-- Alertas de drift (warning e critical)
-- Histórico de predições recentes
+O dashboard estará disponível em http://localhost:8501 e possui 4 abas:
+
+| Aba | Conteúdo |
+|---|---|
+| **📈 Visão Geral** | Cards com todas as métricas (Accuracy, F1, Recall, Precision, CV), gráfico comparativo, KPIs de monitoramento em tempo real |
+| **🔍 Drift Detection** | Distribuição de baseline, comparação baseline vs. atual, diferença por classe, alertas visuais (verde/amarelo/vermelho) |
+| **🕐 Predições** | Tabela de predições recentes, histograma de confiança por faixas, distribuição por classe |
+| **🔧 Detalhes do Modelo** | Informações gerais, hiperparâmetros, features brutas vs. processadas, estatísticas de baseline, metadata JSON |
+
+> **Nota:** O dashboard funciona mesmo com a API offline — nesse caso, carrega
+> os metadados locais do modelo como fallback, exibindo as métricas de
+> treinamento e baseline.
 
 ## Setup com Docker
 
@@ -234,18 +245,44 @@ curl -X POST http://localhost:8000/api/v1/predict \
     "features": {
       "Fase": 4,
       "Ano nasc": 2010,
-      "ANOS PM": 3,
-      "INDE": 7.5,
-      "IAA": 8.0,
-      "IEG": 7.0,
+      "Idade 22": 12,
+      "Gênero": "Menino",
+      "Ano ingresso": 2020,
+      "Instituição de ensino": "Escola Pública",
+      "INDE 22": 7.8,
+      "Cg": 7.0,
+      "Cf": 7.5,
+      "Ct": 8.0,
+      "Nº Av": 4,
+      "IAA": 7.5,
+      "IEG": 8.0,
       "IPS": 6.5,
-      "IDA": 7.8,
-      "IPP": 6.0,
-      "IPV": 7.2,
-      "IAN": 8.5,
-      "Destaque IEG": 0,
-      "Destaque IDA": 0,
-      "Destaque IPV": 1
+      "IDA": 7.0,
+      "Matem": 7.0,
+      "Portug": 6.5,
+      "Inglês": 8.0,
+      "IPV": 6.0,
+      "IAN": 5.5,
+      "Pedra 20_encoded": 2,
+      "Pedra 21_encoded": 3,
+      "Pedra 22_encoded": 3,
+      "tempo_no_programa": 3,
+      "idade_ingresso": 9,
+      "pedra_evolucao_20_21": 1,
+      "pedra_evolucao_21_22": 0,
+      "pedra_evolucao_total": 1,
+      "media_disciplinas": 7.17,
+      "std_disciplinas": 0.76,
+      "min_disciplina": 6.5,
+      "max_disciplina": 8.0,
+      "media_indicadores": 6.75,
+      "std_indicadores": 0.83,
+      "ratio_inde_indicadores": 1.16,
+      "diff_iaa_ida": 0.5,
+      "diff_ieg_ips": 1.5,
+      "indicado_bin": 0,
+      "atingiu_pv_bin": 1,
+      "psicologia_requer_avaliacao": 0
     }
   }'
 ```
@@ -297,8 +334,9 @@ O sistema inclui monitoramento em tempo de execução:
   - `> 0.30` → **critical**
 - **Endpoint `/api/v1/monitoring/stats`** — expõe estatísticas para consumo
   do dashboard ou alertas externos
-- **Dashboard Streamlit** (`dashboard/app.py`) — visualização interativa com
-  auto-refresh a cada 30 segundos
+- **Dashboard Streamlit** (`dashboard/app.py`) — painel interativo com 4 abas
+  (Visão Geral, Drift Detection, Predições, Detalhes do Modelo), auto-refresh
+  opcional e fallback para metadados locais quando a API está offline
 
 ## Testes
 
