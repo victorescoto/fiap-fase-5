@@ -180,13 +180,27 @@ def save_model(
     with open(model_path, 'wb') as f:
         pickle.dump(pipeline, f)
 
-    # Calculate baseline statistics for drift monitoring
-    prediction_dist = {}
-    for classe in CLASS_ORDER:
-        count = sum(1 for key in metrics.keys() if key.startswith(f"recall_{classe}"))
-        if count > 0:
-            # Use test set class distribution as baseline proxy
-            prediction_dist[classe] = 1.0 / len(CLASS_ORDER)  # Simplified
+    # Calculate baseline statistics for drift monitoring from real test predictions
+    y_pred = training_info.get("y_test_pred")
+    y_proba = training_info.get("y_test_proba")
+
+    prediction_dist: dict = {}
+    avg_confidence = 0.70  # fallback
+
+    if y_pred is not None:
+        import collections
+        pred_counts = collections.Counter(y_pred)
+        total = sum(pred_counts.values())
+        prediction_dist = {
+            classe: pred_counts.get(classe, 0) / total
+            for classe in CLASS_ORDER
+        }
+        if y_proba is not None:
+            avg_confidence = float(y_proba.max(axis=1).mean())
+    else:
+        # Fallback: uniform (should not happen in normal flow)
+        for classe in CLASS_ORDER:
+            prediction_dist[classe] = 1.0 / len(CLASS_ORDER)
 
     # Prepare comprehensive metadata (API expects JSON)
     metadata = {
@@ -216,7 +230,7 @@ def save_model(
         },
         "baseline_stats": {
             "prediction_distribution": prediction_dist,
-            "avg_confidence": 0.70,  # Initial baseline
+            "avg_confidence": round(avg_confidence, 4),
             "total_samples": training_info.get("training_data_shape", [0])[0],
         },
     }
@@ -341,13 +355,20 @@ def train_model(
     test_metrics = evaluate_model(pipeline, X_test, y_test)
 
     # 9. Prepare training info for metadata
+    y_test_pred = pipeline.predict(X_test)
+    y_test_proba = None
+    if hasattr(pipeline, "predict_proba"):
+        y_test_proba = pipeline.predict_proba(X_test)
+
     training_info = {
         "training_data_shape": [len(X_train), X_train.shape[1]],
         "test_data_shape": [len(X_test), X_test.shape[1]],
         "cv_f1_mean": cv_metrics["f1_macro_mean"],
         "cv_f1_std": cv_metrics["f1_macro_std"],
         "cv_recall_macro_mean": cv_metrics["recall_macro_mean"],
-        "cv_recall_alto_mean": cv_metrics["recall_alto_mean"]
+        "cv_recall_alto_mean": cv_metrics["recall_alto_mean"],
+        "y_test_pred": y_test_pred,
+        "y_test_proba": y_test_proba,
     }
 
     # 10. Model saving
