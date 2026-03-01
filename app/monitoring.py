@@ -10,7 +10,7 @@ This module provides:
 import logging
 import threading
 from collections import deque
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import numpy as np
@@ -56,7 +56,7 @@ class PredictionLogger:
     ) -> None:
         """Record a single prediction event."""
         entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "prediction": prediction,
             "probability": probability,
             "model_version": model_version,

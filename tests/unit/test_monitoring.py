@@ -58,6 +58,19 @@ class TestLogPrediction:
         assert "timestamp" in entry
         assert entry["features"] == {"x": 5}
 
+    def test_timestamp_is_utc_aware(self, empty_logger: PredictionLogger) -> None:
+        """Timestamps must use timezone-aware UTC (not deprecated utcnow())."""
+        from datetime import datetime, timezone
+
+        empty_logger.log_prediction({"x": 1}, "baixo", 0.9)
+        recent = empty_logger.get_recent_predictions(1)
+        ts = recent[0]["timestamp"]
+        # Should end with +00:00 (timezone-aware) or contain timezone info
+        parsed = datetime.fromisoformat(ts)
+        assert parsed.tzinfo is not None, (
+            f"Timestamp '{ts}' is naive (no timezone). Use datetime.now(timezone.utc)."
+        )
+
 
 # ------------------------------------------------------------------
 # get_recent_predictions
