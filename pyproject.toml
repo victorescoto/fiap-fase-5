@@ -28,7 +28,7 @@ testpaths = ["tests"]
 pythonpath = ["." ]
 
 [tool.coverage.run]
-source = ["app"]
+source = ["app", "src"]
 
 [tool.coverage.report]
 show_missing = true
