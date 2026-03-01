@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.logging_config import setup_logging
 from app.model_loader import load_metadata, load_model
+from app.monitoring import PredictionLogger
 from app.routes import router
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
     app.state.model = load_model()
     app.state.metadata = load_metadata()
+
+    # Initialize prediction logger with baseline stats from training
+    baseline_stats = app.state.metadata.get("baseline_stats", {})
+    app.state.prediction_logger = PredictionLogger(baseline_stats=baseline_stats)
 
     if app.state.model is not None:
         logger.info("Model loaded successfully — ready to serve predictions")

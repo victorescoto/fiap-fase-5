@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from app.schemas import (
     HealthResponse,
     ModelInfoResponse,
+    MonitoringResponse,
     PredictRequest,
     PredictResponse,
 )
@@ -67,6 +68,16 @@ async def predict(
         elapsed = time.perf_counter() - start
         logger.info("Prediction completed in %.4fs | result=%s", elapsed, prediction)
 
+        # Log prediction for monitoring / drift detection
+        prediction_logger = getattr(request.app.state, "prediction_logger", None)
+        if prediction_logger is not None:
+            prediction_logger.log_prediction(
+                features=features,
+                prediction=prediction,
+                probability=probability,
+                model_version=metadata.get("version", "unknown"),
+            )
+
         return PredictResponse(
             prediction=prediction,
             probability=probability,
@@ -93,3 +104,25 @@ async def model_info(request: Request) -> ModelInfoResponse:
         metrics=metadata.get("metrics", {}),
         features=metadata.get("features", []),
     )
+
+
+@router.get(
+    "/api/v1/monitoring/stats",
+    response_model=MonitoringResponse,
+    tags=["Monitoring"],
+)
+async def monitoring_stats(request: Request) -> MonitoringResponse:
+    """Return prediction statistics and drift detection results."""
+    prediction_logger = getattr(request.app.state, "prediction_logger", None)
+    if prediction_logger is None:
+        return MonitoringResponse(
+            total_predictions=0,
+            prediction_distribution={},
+            avg_confidence=0.0,
+            drift_status={"is_drifted": False, "severity": "none",
+                          "max_difference": 0.0, "details": {},
+                          "message": "Monitoring not initialized"},
+            recent_predictions=[],
+        )
+    stats = prediction_logger.get_statistics()
+    return MonitoringResponse(**stats)

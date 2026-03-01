@@ -53,3 +53,25 @@ class ModelInfoResponse(BaseModel):
     features: list[str] = Field(
         default_factory=list, description="Expected feature names"
     )
+
+
+class MonitoringResponse(BaseModel):
+    """Response body for the monitoring stats endpoint."""
+
+    total_predictions: int = Field(
+        ..., description="Total number of predictions logged"
+    )
+    prediction_distribution: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Current prediction label distribution (label → proportion)",
+    )
+    avg_confidence: float = Field(
+        0.0, description="Average prediction confidence/probability"
+    )
+    drift_status: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Drift detection results (is_drifted, severity, details)",
+    )
+    recent_predictions: list[dict[str, Any]] = Field(
+        default_factory=list, description="Most recent predictions"
+    )
