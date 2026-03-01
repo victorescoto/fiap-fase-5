@@ -9,7 +9,6 @@ This module contains functions to:
 
 import json
 import logging
-import pickle
 import warnings
 from datetime import datetime
 from pathlib import Path
@@ -156,7 +155,7 @@ def save_model(
     """
     Saves the trained model in API-compatible format.
 
-    Saves model as pickle (.pkl) and metadata as JSON for API consumption.
+    Saves model with joblib and metadata as JSON for API consumption.
     Includes comprehensive information for deployment and monitoring.
 
     Args:
@@ -175,10 +174,8 @@ def save_model(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save model as pickle (API expects .pkl)
-    model_path = output_dir / "model.pkl"
-    with open(model_path, 'wb') as f:
-        pickle.dump(pipeline, f)
+    model_path = output_dir / "model.joblib"
+    joblib.dump(pipeline, model_path)
 
     # Calculate baseline statistics for drift monitoring from real test predictions
     y_pred = training_info.get("y_test_pred")
@@ -243,7 +240,7 @@ def save_model(
 
     logger.info(f"\n✅ Model saved at: {model_path}")
     logger.info(f"✅ Metadata saved at: {metadata_path}")
-    logger.info("   Format: pickle (.pkl) + JSON for API compatibility")
+    logger.info("   Format: joblib + JSON for API compatibility")
     logger.info(f"   Features tracked: {len(feature_names)}")
 
     return model_path
@@ -410,7 +407,7 @@ def load_model(model_path: Optional[Path] = None) -> Tuple[Pipeline, Dict[str, A
         model_path = MODEL_DIR / "model.joblib"
 
     model_path = Path(model_path)
-    metadata_path = model_path.parent / "model_metadata.joblib"
+    metadata_path = model_path.parent / "model_metadata.json"
 
     if not model_path.exists():
         raise FileNotFoundError(f"Model not found: {model_path}")
@@ -419,6 +416,7 @@ def load_model(model_path: Optional[Path] = None) -> Tuple[Pipeline, Dict[str, A
     metadata = {}
 
     if metadata_path.exists():
-        metadata = joblib.load(metadata_path)
+        with open(metadata_path) as f:
+            metadata = json.load(f)
 
     return pipeline, metadata

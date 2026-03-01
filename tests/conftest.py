@@ -88,7 +88,7 @@ class _DummyModel:
 def tmp_model_path() -> Generator[Path]:
     """Create a temporary model file serialized with joblib."""
     model = _DummyModel()
-    with tempfile.NamedTemporaryFile(suffix=".pkl", delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".joblib", delete=False) as f:
         joblib.dump(model, f.name)
         yield Path(f.name)
     Path(f.name).unlink(missing_ok=True)

@@ -11,27 +11,14 @@ class TestLoadModel:
         assert model is not None
 
     def test_load_missing_file_returns_none(self, tmp_path: Path) -> None:
-        model = load_model(tmp_path / "nonexistent.pkl")
+        model = load_model(tmp_path / "nonexistent.joblib")
         assert model is None
 
     def test_load_corrupted_file_returns_none(self, tmp_path: Path) -> None:
-        corrupted = tmp_path / "corrupted.pkl"
-        corrupted.write_text("this is not a valid pickle")
+        corrupted = tmp_path / "corrupted.joblib"
+        corrupted.write_text("this is not a valid file")
         model = load_model(corrupted)
         assert model is None
-
-    def test_load_valid_pickle_model(self, tmp_path: Path) -> None:
-        """Ensure fallback to pickle works when joblib fails."""
-        import pickle
-
-        dummy = {"type": "dummy_model"}
-        pkl_path = tmp_path / "model.pkl"
-        with open(pkl_path, "wb") as f:
-            pickle.dump(dummy, f)
-
-        model = load_model(pkl_path)
-        assert model is not None
-        assert model["type"] == "dummy_model"
 
 
 class TestLoadMetadata:

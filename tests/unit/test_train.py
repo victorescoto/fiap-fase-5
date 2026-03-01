@@ -1,9 +1,9 @@
 """Tests for src.model.train module."""
 
 import json
-import pickle
 from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
 import pytest
@@ -111,7 +111,7 @@ class TestSaveModel:
         path = save_model(pipe, metrics, features, training_info, tmp_path)
 
         assert path.exists()
-        assert path.suffix == ".pkl"
+        assert path.suffix == ".joblib"
         assert (tmp_path / "model_metadata.json").exists()
 
     def test_metadata_content(self, tmp_path: Path) -> None:
@@ -147,8 +147,7 @@ class TestSaveModel:
 
         path = save_model(pipe, metrics, features, training_info, tmp_path)
 
-        with open(path, "rb") as f:
-            loaded = pickle.load(f)
+        loaded = joblib.load(path)
         assert isinstance(loaded, Pipeline)
 
 
@@ -168,7 +167,7 @@ class TestTrainModel:
         assert "cv_metrics" in results
         assert "test_metrics" in results
         assert results["model_name"] == "LogisticRegression"
-        assert (tmp_path / "model.pkl").exists()
+        assert (tmp_path / "model.joblib").exists()
         assert (tmp_path / "model_metadata.json").exists()
 
     def test_train_without_save(
@@ -178,4 +177,4 @@ class TestTrainModel:
             sample_df, save=False, output_dir=tmp_path
         )
         assert pipeline is not None
-        assert not (tmp_path / "model.pkl").exists()
+        assert not (tmp_path / "model.joblib").exists()
