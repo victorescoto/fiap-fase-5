@@ -1,14 +1,16 @@
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class PredictRequest(BaseModel):
     """Request body for the prediction endpoint.
 
-    Uses a flexible dict for features until the model's expected
-    input schema is finalized. Once defined, replace `features`
-    with explicit typed fields.
+    Accepts a dictionary mapping feature names to values.
+    Feature names should use the *raw* column names (without the
+    ``numeric__`` / ``categorical__`` prefix added by the
+    preprocessor).  The API strips these prefixes automatically
+    when validating against the model metadata.
     """
 
     features: dict[str, Any] = Field(
@@ -16,9 +18,18 @@ class PredictRequest(BaseModel):
         description="Dictionary of student features for prediction",
         json_schema_extra={
             "example": {
-                "feature_1": 0.5,
-                "feature_2": "value",
-                "feature_3": 10,
+                "Fase": 4,
+                "Ano nasc": 2010,
+                "Idade 22": 12,
+                "Ano ingresso": 2020,
+                "IAA": 7.5,
+                "IEG": 8.0,
+                "IPS": 6.5,
+                "IDA": 7.0,
+                "IPV": 6.0,
+                "IAN": 5.5,
+                "Gênero_Menino": 1,
+                "Instituição de ensino_Escola Pública": 1,
             }
         },
     )
@@ -74,4 +85,22 @@ class MonitoringResponse(BaseModel):
     )
     recent_predictions: list[dict[str, Any]] = Field(
         default_factory=list, description="Most recent predictions"
+    )
+
+
+class BatchPredictRequest(BaseModel):
+    """Request body for the batch prediction endpoint."""
+
+    predictions: list[PredictRequest] = Field(
+        ...,
+        description="List of prediction requests to process in batch",
+        min_length=1,
+    )
+
+
+class BatchPredictResponse(BaseModel):
+    """Response body for the batch prediction endpoint."""
+
+    predictions: list[PredictResponse] = Field(
+        ..., description="List of prediction results",
     )
