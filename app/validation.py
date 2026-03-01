@@ -9,9 +9,18 @@ prefixes transparently so callers can use *raw* column names.
 
 from __future__ import annotations
 
+import logging
 import re
+from typing import Any
 
 _PREFIX_RE = re.compile(r"^(?:numeric|categorical)__")
+
+logger = logging.getLogger(__name__)
+
+
+# ------------------------------------------------------------------
+# Low-level helpers
+# ------------------------------------------------------------------
 
 
 def _strip_prefix(name: str) -> str:
@@ -49,3 +58,62 @@ def validate_features(
     extra = sorted(provided_set - expected_set)
 
     return missing, extra
+
+
+# ------------------------------------------------------------------
+# Exceptions
+# ------------------------------------------------------------------
+
+
+class MissingFeaturesError(Exception):
+    """Raised when required features are absent from the request."""
+
+    def __init__(
+        self,
+        missing: list[str],
+        expected: list[str],
+    ) -> None:
+        self.missing = missing
+        self.expected = expected
+        super().__init__(f"Missing required features: {missing}")
+
+
+# ------------------------------------------------------------------
+# High-level validation against model metadata
+# ------------------------------------------------------------------
+
+
+def validate_request_features(
+    features: dict[str, Any],
+    metadata: dict[str, Any],
+) -> None:
+    """Validate *features* against the model metadata.
+
+    Resolves the expected feature list from *metadata* (preferring
+    ``input_features`` over ``features``), delegates to
+    :func:`validate_features`, logs extra features as warnings, and
+    raises :class:`MissingFeaturesError` when required features are
+    absent.
+
+    Args:
+        features: Feature dict sent by the client.
+        metadata: Full model metadata dict.
+
+    Raises:
+        MissingFeaturesError: If one or more expected features are
+            missing from *features*.
+    """
+    expected = metadata.get("input_features") or metadata.get("features", [])
+    if not expected:
+        return
+
+    missing, extra = validate_features(features, expected)
+
+    if extra:
+        logger.warning("Extra features ignored: %s", extra)
+
+    if missing:
+        raise MissingFeaturesError(
+            missing=missing,
+            expected=[_strip_prefix(f) for f in expected],
+        )

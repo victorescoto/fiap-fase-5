@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.validation import validate_features
+from app.validation import MissingFeaturesError, validate_features, validate_request_features
 
 
 EXPECTED_FEATURES = [
@@ -83,3 +83,58 @@ class TestValidateFeatures:
         expected = ["numeric__A", "numeric__B", "categorical__C"]
         missing, _ = validate_features(features, expected)
         assert missing == ["A", "B", "C"]
+
+
+class TestValidateRequestFeatures:
+    """Tests for the high-level validate_request_features function."""
+
+    def test_raises_on_missing_features(self) -> None:
+        metadata = {"input_features": ["A", "B", "C"]}
+        with pytest.raises(MissingFeaturesError) as exc_info:
+            validate_request_features({"A": 1}, metadata)
+        assert "B" in exc_info.value.missing
+        assert "C" in exc_info.value.missing
+
+    def test_passes_when_all_present(self) -> None:
+        metadata = {"input_features": ["A", "B"]}
+        validate_request_features({"A": 1, "B": 2}, metadata)  # no exception
+
+    def test_extra_features_tolerated(self) -> None:
+        metadata = {"input_features": ["A"]}
+        validate_request_features({"A": 1, "EXTRA": 2}, metadata)  # no exception
+
+    def test_prefers_input_features_over_features(self) -> None:
+        metadata = {
+            "input_features": ["X", "Y"],
+            "features": ["numeric__A", "numeric__B"],
+        }
+        # Should validate against input_features, not features
+        validate_request_features({"X": 1, "Y": 2}, metadata)
+
+    def test_falls_back_to_features_key(self) -> None:
+        metadata = {"features": ["numeric__A", "numeric__B"]}
+        with pytest.raises(MissingFeaturesError):
+            validate_request_features({"A": 1}, metadata)
+
+    def test_skips_when_no_metadata(self) -> None:
+        validate_request_features({"A": 1}, {})  # no exception
+
+    def test_error_contains_expected_list(self) -> None:
+        metadata = {"input_features": ["A", "B", "C"]}
+        with pytest.raises(MissingFeaturesError) as exc_info:
+            validate_request_features({}, metadata)
+        assert exc_info.value.expected == ["A", "B", "C"]
+
+
+class TestMissingFeaturesError:
+    """Tests for the MissingFeaturesError exception."""
+
+    def test_attributes(self) -> None:
+        err = MissingFeaturesError(missing=["A"], expected=["A", "B"])
+        assert err.missing == ["A"]
+        assert err.expected == ["A", "B"]
+
+    def test_str_contains_missing(self) -> None:
+        err = MissingFeaturesError(missing=["X", "Y"], expected=["X", "Y", "Z"])
+        assert "X" in str(err)
+        assert "Y" in str(err)
