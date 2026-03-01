@@ -26,6 +26,7 @@ _MODEL_METADATA: dict = {
     "version": "1.0.0-test",
     "metrics": {"accuracy": 0.95},
     "features": ["numeric__feature_1", "numeric__feature_2"],
+    "input_features": ["feature_1", "feature_2"],
     "baseline_stats": {
         "prediction_distribution": {
             "baixo": 0.60,

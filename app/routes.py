@@ -3,6 +3,7 @@ import time
 from typing import Any
 
 import numpy as np
+import pandas as pd
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
@@ -33,11 +34,16 @@ def _validate_request_features(
 ) -> JSONResponse | None:
     """Return a 422 ``JSONResponse`` when *features* are invalid, else ``None``.
 
-    Validates ``features`` keys against the model's expected feature
-    list stored in *metadata*.  Missing features cause a hard 422;
-    extra features are tolerated (with a log warning).
+    Validates ``features`` keys against the model's expected input
+    feature list stored in *metadata* (``input_features`` key — the raw
+    column names the pipeline preprocessor expects).  Falls back to
+    ``features`` (post-preprocessing names) when ``input_features`` is
+    absent, stripping ``numeric__`` / ``categorical__`` prefixes.
+
+    Missing features cause a hard 422; extra features are tolerated
+    (with a log warning).
     """
-    expected = metadata.get("features", [])
+    expected = metadata.get("input_features") or metadata.get("features", [])
     if not expected:
         return None  # no metadata to validate against
 
@@ -68,10 +74,14 @@ def _do_prediction(
 ) -> PredictResponse:
     """Run a single prediction and log it.
 
+    Builds a single-row ``DataFrame`` so that sklearn ``Pipeline``
+    objects with a ``ColumnTransformer`` preprocessor can match
+    columns by name.
+
     Raises on model errors — the caller is responsible for catching.
     """
-    feature_values = np.array([list(features.values())])
-    raw_prediction = model.predict(feature_values)
+    input_df = pd.DataFrame([features])
+    raw_prediction = model.predict(input_df)
 
     prediction = raw_prediction[0]
     if hasattr(prediction, "item"):
@@ -79,7 +89,7 @@ def _do_prediction(
 
     probability = None
     if hasattr(model, "predict_proba"):
-        proba = model.predict_proba(feature_values)
+        proba = model.predict_proba(input_df)
         probability = float(proba.max())
 
     version = metadata.get("version", "unknown")
