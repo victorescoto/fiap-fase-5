@@ -17,3 +17,13 @@ variable "enable_apprunner" {
   type    = bool
   default = true
 }
+
+variable "dashboard_name" {
+  type    = string
+  default = "passos-magicos-dashboard"
+}
+
+variable "api_base_url" {
+  type    = string
+  default = ""
+}
