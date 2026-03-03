@@ -32,3 +32,15 @@ Thumbs.db
 app/model/*.pkl
 app/model/*.joblib
 !app/model/.gitkeep
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Terraform override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

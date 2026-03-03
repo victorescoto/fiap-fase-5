@@ -1,0 +1,68 @@
+name: Deploy to AWS (App Runner)
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  PROJECT_NAME: passos-magicos-api
+  TF_DIR: infra/terraform
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init
+
+      # FASE 1: cria só o ECR (sem App Runner)
+      - name: Terraform Apply (ECR only)
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -auto-approve -var="region=${{ env.AWS_REGION }}" -var="project_name=${{ env.PROJECT_NAME }}" -var="enable_apprunner=false"
+
+      - name: Export ECR URL
+        id: tfout
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          echo "ECR_URL=$(terraform output -raw ecr_repository_url)" >> $GITHUB_OUTPUT
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag and push Docker image
+        env:
+          ECR_URL: ${{ steps.tfout.outputs.ECR_URL }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_URL:$IMAGE_TAG .
+          docker tag $ECR_URL:$IMAGE_TAG $ECR_URL:latest
+          docker push $ECR_URL:$IMAGE_TAG
+          docker push $ECR_URL:latest
+
+      # FASE 2: agora cria/atualiza o App Runner apontando pra latest
+      - name: Terraform Apply (App Runner)
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -auto-approve -var="region=${{ env.AWS_REGION }}" -var="project_name=${{ env.PROJECT_NAME }}" -var="image_tag=latest" -var="enable_apprunner=true"
+
+      - name: Show outputs
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform output
