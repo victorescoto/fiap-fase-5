@@ -8,6 +8,7 @@ Requires the API to be running at http://localhost:8000 for live
 monitoring data.  Model metadata is loaded from disk as fallback.
 """
 
+import os
 import json
 import time
 from pathlib import Path
@@ -16,11 +17,12 @@ import pandas as pd
 import requests
 import streamlit as st
 
+
 # ------------------------------------------------------------------
 # Config
 # ------------------------------------------------------------------
 
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 METADATA_PATH = (
     Path(__file__).resolve().parent.parent / "app" / "model" / "model_metadata.json"
 )
