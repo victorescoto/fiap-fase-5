@@ -30,6 +30,7 @@ resource "aws_iam_role_policy_attachment" "apprunner_ecr_access" {
 }
 
 resource "aws_apprunner_service" "api" {
+  count        = var.enable_apprunner ? 1 : 0
   service_name = var.project_name
 
   source_configuration {

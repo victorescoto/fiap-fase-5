@@ -3,5 +3,5 @@ output "ecr_repository_url" {
 }
 
 output "service_url" {
-  value = aws_apprunner_service.api.service_url
+  value = try(aws_apprunner_service.api[0].service_url, "")
 }

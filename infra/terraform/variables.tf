@@ -12,3 +12,8 @@ variable "image_tag" {
   type    = string
   default = "latest"
 }
+
+variable "enable_apprunner" {
+  type    = bool
+  default = true
+}
