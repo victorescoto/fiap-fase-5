@@ -22,8 +22,3 @@ variable "dashboard_name" {
   type    = string
   default = "passos-magicos-dashboard"
 }
-
-variable "api_base_url" {
-  type    = string
-  default = ""
-}
