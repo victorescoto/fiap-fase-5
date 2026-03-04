@@ -14,15 +14,6 @@ resource "aws_ecr_repository" "api" {
   }
 }
 
-resource "aws_ecr_repository" "dashboard" {
-  name                 = var.dashboard_name
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-}
-
 # ----------------------------
 # IAM: App Runner access to ECR
 # ----------------------------
