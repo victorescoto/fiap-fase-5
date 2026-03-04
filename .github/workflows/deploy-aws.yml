@@ -35,15 +35,18 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: terraform init
 
-      # FASE 1: cria só os ECRs (sem App Runner)
-      - name: Terraform Apply (ECR only)
+      # FASE 1: garante ECR + IAM (sem tocar App Runner)
+      - name: Terraform Apply (ECR + IAM only)
         working-directory: ${{ env.TF_DIR }}
         run: |
           terraform apply -auto-approve \
             -var="region=${{ env.AWS_REGION }}" \
             -var="project_name=${{ env.PROJECT_NAME }}" \
             -var="dashboard_name=${{ env.DASHBOARD_NAME }}" \
-            -var="enable_apprunner=false"
+            -target=aws_ecr_repository.api \
+            -target=aws_ecr_repository.dashboard \
+            -target=aws_iam_role.apprunner_ecr_access \
+            -target=aws_iam_role_policy_attachment.apprunner_ecr_access
 
       - name: Export ECR URLs
         id: tfout
@@ -75,16 +78,15 @@ jobs:
           docker push $ECR_URL:$IMAGE_TAG
           docker push $ECR_URL:latest
 
-      # FASE 2: cria/atualiza App Runner (API + Dashboard)
-      - name: Terraform Apply (App Runner)
+      # FASE 2: aplica infra completa (inclui App Runner, sem destruir)
+      - name: Terraform Apply (Full)
         working-directory: ${{ env.TF_DIR }}
         run: |
           terraform apply -auto-approve \
             -var="region=${{ env.AWS_REGION }}" \
             -var="project_name=${{ env.PROJECT_NAME }}" \
             -var="dashboard_name=${{ env.DASHBOARD_NAME }}" \
-            -var="image_tag=latest" \
-            -var="enable_apprunner=true"
+            -var="image_tag=latest"
 
       - name: Show outputs
         working-directory: ${{ env.TF_DIR }}
