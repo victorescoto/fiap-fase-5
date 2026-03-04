@@ -70,34 +70,3 @@ resource "aws_apprunner_service" "api" {
 
   depends_on = [aws_iam_role_policy_attachment.apprunner_ecr_access]
 }
-
-# ----------------------------
-# App Runner: Dashboard (Streamlit)
-# ----------------------------
-resource "aws_apprunner_service" "dashboard" {
-  count        = var.enable_apprunner ? 1 : 0
-  service_name = var.dashboard_name
-
-  source_configuration {
-    authentication_configuration {
-      access_role_arn = aws_iam_role.apprunner_ecr_access.arn
-    }
-
-    image_repository {
-      image_configuration {
-        port = "8501"
-
-        runtime_environment_variables = {
-          API_BASE_URL = "https://${aws_apprunner_service.api[0].service_url}"
-        }
-      }
-
-      image_identifier      = "${aws_ecr_repository.dashboard.repository_url}:${var.image_tag}"
-      image_repository_type = "ECR"
-    }
-
-    auto_deployments_enabled = true
-  }
-
-  depends_on = [aws_iam_role_policy_attachment.apprunner_ecr_access]
-}
