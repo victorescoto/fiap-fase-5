@@ -1,5 +1,13 @@
 # Passos Mágicos — Modelo Preditivo de Risco de Defasagem Escolar
 
+## Demonstração da Solução (Links)
+
+- **Dashboard (Streamlit Cloud):** https://pmagicos-api.streamlit.app  
+- **API (AWS App Runner - Swagger):** https://tdrasvmtf2.us-east-1.awsapprunner.com/docs  
+- **API (AWS App Runner - Health):** https://tdrasvmtf2.us-east-1.awsapprunner.com/health  
+
+> **Nota:** o dashboard consome a API via variável de ambiente `API_BASE_URL`.
+
 ## Contexto do Negócio
 
 A **Associação Passos Mágicos** atua na transformação da vida de crianças e jovens
@@ -20,7 +28,31 @@ O sistema é composto por:
 2. **API REST** — FastAPI servindo predições em tempo real
 3. **Monitoramento Contínuo** — logging de predições e detecção de drift
 4. **Dashboard** — Streamlit para visualização de drift e métricas
-5. **Infraestrutura** — Docker para empacotamento e deploy
+5. **Infraestrutura em Cloud** — Deploy automatizado na AWS utilizando Docker, Terraform e GitHub Actions.
+
+# Arquitetura da Solução
+
+```
++---------------------------+
+|     Streamlit Cloud       |
+|   Dashboard (Frontend)    |
++------------+--------------+
+             |
+             | REST API
+             v
++---------------------------+
+|      AWS App Runner       |
+|       FastAPI API         |
+|   Modelo ML carregado     |
++------------+--------------+
+             |
+             | logs / métricas
+             v
++---------------------------+
+|   Sistema de Monitoramento|
+| PredictionLogger + Drift  |
++---------------------------+
+```
 
 ## Stack Tecnológica
 
@@ -32,13 +64,18 @@ O sistema é composto por:
 | Monitoramento | PredictionLogger (custom) + Streamlit |
 | Serialização | pickle (.pkl) + JSON (metadados) |
 | Testes | pytest + pytest-cov (≥80% cobertura) |
-| Empacotamento | Docker |
+| Containerização | Docker |
 | Gerenciador de pacotes | uv |
 | Logging | python-json-logger (structured JSON) |
+| Infra as Code | Terraform |
+| CI/CD | GitHub Actions |
 
 ## Estrutura do Projeto
 
 ```
+.github/
+└── workflows/
+    └── deploy-aws.yml          # CI/CD: build/push da imagem + Terraform apply  (AWS App Runner) 
 app/
 ├── __init__.py
 ├── main.py                     # Aplicação FastAPI, lifespan, middlewares
@@ -50,11 +87,18 @@ app/
 ├── monitoring.py               # Logging de predições e detecção de drift
 ├── logging_config.py           # Configuração de logging JSON
 └── model/
-    ├── model.joblib             # Modelo serializado
-    ├── model_metadata.joblib    # Metadados serializados (joblib)
-    └── model_metadata.json      # Metadados do modelo (JSON)
+    ├── model.joblib            # Modelo serializado
+    ├── model_metadata.joblib   # Metadados serializados (joblib)
+    └── model_metadata.json     # Metadados do modelo (JSON)
 dashboard/
 └── app.py                      # Dashboard Streamlit (monitoramento)
+infra/
+└── terraform/
+    ├── backend.tf              # Backend remoto do Terraform (S3 state + DynamoDB lock)
+    ├── main.tf                 # Infra AWS (ECR + App Runner + IAM Role)
+    ├── outputs.tf              # Outputs (service_url, ecr_repository_url, etc.)
+    ├── variables.tf            # Variáveis do Terraform (region, project_name, image_tag, etc.)
+    ├── versions.tf             # Providers e versões mínimas do Terraform
 notebooks/
 └── analise-exploratoria.ipynb  # Análise exploratória dos dados
 src/
@@ -161,6 +205,57 @@ seguintes motivos:
 
 > O modelo identifica **100% dos alunos de alto risco** (Recall = 1.0) com uma
 > taxa de falso positivo controlada (Precision = 0.75).
+
+# CI/CD e Deploy Automatizado
+
+O deploy da API é automatizado utilizando **GitHub Actions**.
+
+Workflow localizado em:
+
+```
+.github/workflows/deploy-aws.yml
+```
+
+### Pipeline de Deploy
+
+Sempre que ocorre um push na branch **main**, o pipeline executa:
+
+1. Checkout do código
+2. Autenticação na AWS
+3. Provisionamento da infraestrutura com Terraform
+4. Build da imagem Docker
+5. Push da imagem para o Amazon ECR
+6. Deploy automático no AWS App Runner
+
+**Componentes AWS utilizados (API):**
+- **Amazon ECR** — repositório da imagem Docker da API
+- **AWS App Runner** — execução do container da API
+- **IAM Role** — permissões do App Runner para puxar imagem do ECR
+- **Terraform backend (S3 + DynamoDB)** — state remoto e lock
+
+### Secrets utilizados
+
+| Secret | Descrição |
+|---|---|
+| AWS_ACCESS_KEY_ID | Access key do usuário IAM |
+| AWS_SECRET_ACCESS_KEY | Secret key do usuário IAM |
+
+O workflow também pode ser executado manualmente em:
+
+```
+GitHub → Actions → Deploy to AWS → Run workflow
+```
+
+### Dashboard (Streamlit Cloud)
+
+O dashboard foi publicado no **Streamlit Community Cloud**, consumindo a API hospedada na AWS.
+
+- **Dashboard:** https://pmagicos-api.streamlit.app
+
+**Configuração (Streamlit Cloud → App Settings → Secrets):**
+```
+API_BASE_URL="https://tdrasvmtf2.us-east-1.awsapprunner.com"
+```
 
 ## Setup Local
 
