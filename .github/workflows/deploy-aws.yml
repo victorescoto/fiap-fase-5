@@ -34,7 +34,6 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: terraform init
 
-      # FASE 1: garante ECR + IAM (sem tocar App Runner)
       - name: Terraform Apply (ECR + IAM only)
         working-directory: ${{ env.TF_DIR }}
         run: |
