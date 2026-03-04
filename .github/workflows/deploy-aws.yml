@@ -8,7 +8,6 @@ on:
 env:
   AWS_REGION: us-east-1
   PROJECT_NAME: passos-magicos-api
-  DASHBOARD_NAME: passos-magicos-dashboard
   TF_DIR: infra/terraform
 
 jobs:
@@ -42,18 +41,15 @@ jobs:
           terraform apply -auto-approve \
             -var="region=${{ env.AWS_REGION }}" \
             -var="project_name=${{ env.PROJECT_NAME }}" \
-            -var="dashboard_name=${{ env.DASHBOARD_NAME }}" \
             -target=aws_ecr_repository.api \
-            -target=aws_ecr_repository.dashboard \
             -target=aws_iam_role.apprunner_ecr_access \
             -target=aws_iam_role_policy_attachment.apprunner_ecr_access
 
-      - name: Export ECR URLs
+      - name: Export ECR URL
         id: tfout
         working-directory: ${{ env.TF_DIR }}
         run: |
           echo "API_ECR=$(terraform output -raw ecr_repository_url)" >> $GITHUB_OUTPUT
-          echo "DASH_ECR=$(terraform output -raw dashboard_ecr_repository_url)" >> $GITHUB_OUTPUT
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -68,24 +64,12 @@ jobs:
           docker push $ECR_URL:$IMAGE_TAG
           docker push $ECR_URL:latest
 
-      - name: Build, tag and push Dashboard image
-        env:
-          ECR_URL: ${{ steps.tfout.outputs.DASH_ECR }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build -f Dockerfile.dashboard -t $ECR_URL:$IMAGE_TAG .
-          docker tag $ECR_URL:$IMAGE_TAG $ECR_URL:latest
-          docker push $ECR_URL:$IMAGE_TAG
-          docker push $ECR_URL:latest
-
-      # FASE 2: aplica infra completa (inclui App Runner, sem destruir)
       - name: Terraform Apply (Full)
         working-directory: ${{ env.TF_DIR }}
         run: |
           terraform apply -auto-approve \
             -var="region=${{ env.AWS_REGION }}" \
             -var="project_name=${{ env.PROJECT_NAME }}" \
-            -var="dashboard_name=${{ env.DASHBOARD_NAME }}" \
             -var="image_tag=latest"
 
       - name: Show outputs
