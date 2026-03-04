@@ -15,5 +15,10 @@ COPY app/model/model_metadata.json app/model/model_metadata.json
 EXPOSE 8501
 
 ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+ENV STREAMLIT_SERVER_HEADLESS=true
+ENV STREAMLIT_SERVER_ENABLE_CORS=false
+ENV STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
+ENV STREAMLIT_SERVER_PORT=8501
+ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
 
-CMD ["uv","run","python","-m","streamlit","run","dashboard/app.py","--server.address=0.0.0.0","--server.port=8501","--server.headless=true","--server.enableCORS=false","--server.enableXsrfProtection=false"]
+CMD ["uv","run","python","-m","streamlit","run","dashboard/app.py"]
