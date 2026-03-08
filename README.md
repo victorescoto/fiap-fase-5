@@ -62,7 +62,7 @@ O sistema é composto por:
 | API | FastAPI + Uvicorn |
 | ML | scikit-learn, pandas, numpy |
 | Monitoramento | PredictionLogger (custom) + Streamlit |
-| Serialização | pickle (.pkl) + JSON (metadados) |
+| Serialização | joblib (.joblib) + JSON (metadados) |
 | Testes | pytest + pytest-cov (≥80% cobertura) |
 | Containerização | Docker |
 | Gerenciador de pacotes | uv |
@@ -283,7 +283,7 @@ Documentação interativa (Swagger): http://localhost:8000/docs
 uv run python -m src.model.run_training
 ```
 
-O modelo treinado será salvo em `app/model/model.pkl` e os metadados em
+O modelo treinado será salvo em `app/model/model.joblib` e os metadados em
 `app/model/model_metadata.json`.
 
 ### Dashboard de Monitoramento
